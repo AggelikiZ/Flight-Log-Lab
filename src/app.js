@@ -345,7 +345,7 @@
     var has = S.sources.length > 0;
     $('#app').classList.toggle('hidden', !has);
     $('#drop').classList.toggle('compact', has);
-    $('#chatFab').classList.toggle('hidden', !has || (!sampleCap && !window.Anthropic));
+    $('#chatFab').classList.toggle('hidden', !has || !sampleCap);
     $('#exportBtn').disabled = !has; $('#clearBtn').disabled = !has;
     if (has) { $('#drop h2').textContent = 'Add more files'; $('#drop p').textContent = 'Drop more logs from the same launch, or click to browse.'; }
     else { $('#drop h2').textContent = 'Drop your flight logs here'; }
@@ -890,98 +890,16 @@
     if (S.sources.some(function (s) { return s.ch.byRole.control; })) qs.splice(2, 0, 'How did the airbrakes behave?');
     qs.forEach(function (q) { box.appendChild(h('button', { text: q, onclick: function () { $('#chatInput').value = q; sendChat(); } })); });
   }
-  // wraps TOOLS so each call shows a "↳ tool" note above the answer bubble
-  function chatTools(bot) {
-    return TOOLS.map(function (tl) { return { name: tl.name, description: tl.description, inputSchema: tl.inputSchema, execute: async function (input) { var note = h('div', { class: 'msg tool', text: '↳ ' + tl.name + (input && input.channel ? ' · ' + input.board + ' / ' + input.channel : '') }); $('#chatLog').insertBefore(note, bot); try { return tl.execute(input || {}); } catch (e) { note.textContent += ' — ' + e.message; throw e; } } }; });
-  }
-
-  /* --- Direct Claude API (bring-your-own key; used when not hosted as a claude.ai artifact) --- */
-  var MODEL = 'claude-opus-5-5', MAX_TOOL_ROUNDS = 12;
-  var apiKey = store.get('anthropicKey', null);
-  var apiChat = { messages: [] };  // full content blocks, append-only (required for preserved thinking)
-  function canChat() { return !!sampleCap || (!!apiKey && !!window.Anthropic); }
-  function updateKeyUi(forceShow) {
-    var byo = !sampleCap;
-    $('#chatKeyBtn').classList.toggle('hidden', !byo);
-    var show = byo && (forceShow || !apiKey);
-    $('#chatKeyBox').classList.toggle('hidden', !show);
-    $('#chatKeyForget').classList.toggle('hidden', !store.get('anthropicKey', null));
-    $('#chatKeyErr').classList.add('hidden');
-    $('#chatInput').disabled = $('#chatSend').disabled = !canChat();
-    if (show) setTimeout(function () { $('#chatKeyInput').focus(); }, 50);
-  }
-  function showKeyError(msg) { updateKeyUi(true); var e = $('#chatKeyErr'); e.textContent = msg; e.classList.remove('hidden'); }
-  function setKey(k, remember) {
-    apiKey = k || null;
-    try { localStorage.removeItem('fll:anthropicKey'); } catch (e) { }
-    if (apiKey && remember) store.set('anthropicKey', apiKey);
-  }
-  function toolResultText(v) { return typeof v === 'string' ? v : JSON.stringify(v); }
-  async function runApiChat(text, bot, tools) {
-    var client = new window.Anthropic({ apiKey: apiKey, dangerouslyAllowBrowser: true, maxRetries: 2 });
-    var A = window.Anthropic, msgs = apiChat.messages, start = msgs.length;
-    var first = !msgs.length;
-    msgs.push({ role: 'user', content: first ? 'CURRENT ANALYSIS:\n' + JSON.stringify(contextSummary()) + '\n\nQUESTION: ' + text : text });
-    var apiTools = TOOLS.map(function (tl) { return { name: tl.name, description: tl.description, input_schema: tl.inputSchema }; });
-    var shown = '';
-    try {
-      for (var round = 0; ; round++) {
-        var stream = client.beta.messages.stream({
-          model: MODEL, max_tokens: 16000,
-          betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default',
-          output_config: { effort: 'medium' },
-          cache_control: { type: 'ephemeral' },
-          system: SYSTEM, tools: apiTools, messages: msgs
-        }, { signal: chat.abort.signal });
-        var sep = shown ? '\n\n' : '';
-        stream.on('text', function (d) { shown += sep + d; sep = ''; bot.innerHTML = md(shown); $('#chatLog').appendChild(bot); scrollChat(); });
-        var msg = await stream.finalMessage();
-        msgs.push({ role: 'assistant', content: msg.content });
-        if (msg.stop_reason === 'refusal') { shown += (shown ? '\n\n' : '') + '_Claude declined to answer this one._'; break; }
-        if (msg.stop_reason === 'pause_turn') continue;
-        var uses = msg.content.filter(function (b) { return b.type === 'tool_use'; });
-        if (msg.stop_reason !== 'tool_use' || !uses.length) { if (msg.stop_reason === 'max_tokens') shown += '\n\n_(answer cut off — ask me to continue)_'; break; }
-        if (round >= MAX_TOOL_ROUNDS) { msgs.push({ role: 'user', content: uses.map(function (u) { return { type: 'tool_result', tool_use_id: u.id, is_error: true, content: 'Tool budget for this question used up. Answer with what you have.' }; }) }); continue; }
-        var results = [];
-        for (var i = 0; i < uses.length; i++) {
-          var u = uses[i], tl = tools.find(function (x) { return x.name === u.name; });
-          try {
-            if (!tl) throw new Error('Unknown tool ' + u.name);
-            results.push({ type: 'tool_result', tool_use_id: u.id, content: toolResultText(await tl.execute(u.input || {})) });
-          } catch (e) { results.push({ type: 'tool_result', tool_use_id: u.id, is_error: true, content: String((e && e.message) || e) }); }
-        }
-        msgs.push({ role: 'user', content: results });  // all results of one turn in a single message
-      }
-      bot.innerHTML = md(shown || '(no answer)'); $('#chatLog').appendChild(bot);
-    } catch (e) {
-      msgs.length = start;  // drop the unfinished turn so the next question starts from a clean history
-      if (e instanceof A.APIUserAbortError) { bot.remove(); return; }
-      if (e instanceof A.AuthenticationError) { bot.innerHTML = md('Your API key was rejected. Please enter a valid key.'); setKey(null); showKeyError('That key was rejected by the API (401).'); }
-      else if (e instanceof A.PermissionDeniedError) bot.innerHTML = md('This API key is not allowed to use ' + MODEL + '. Check your Anthropic Console workspace settings.');
-      else if (e instanceof A.RateLimitError) bot.innerHTML = md('Rate limit reached on your API key — wait a moment and try again.');
-      else if (e instanceof A.APIConnectionError) bot.innerHTML = md('Could not reach the Claude API. Check your connection and try again.');
-      else if (e instanceof A.APIError) bot.innerHTML = md('The Claude API returned an error (' + (e.status || '?') + '): ' + e.message);
-      else bot.innerHTML = md('Sorry, that failed: ' + ((e && e.message) || e));
-    }
-  }
-
   async function sendChat() {
     var inp = $('#chatInput'), text = inp.value.trim();
-    if (!text || chat.busy || !canChat()) return;
+    if (!text || chat.busy || !sampleCap) return;
     inp.value = ''; $('#chatSuggest').innerHTML = '';
     addMsg('user', text);
-    if (!sampleCap) {
-      var bot0 = addMsg('bot', 'Thinking…'); chat.busy = true; $('#chatSend').disabled = true;
-      chat.abort = new AbortController(); chat.history.push(text);  // history only marks "conversation started"
-      await runApiChat(text, bot0, chatTools(bot0));
-      chat.busy = false; $('#chatSend').disabled = false; scrollChat();
-      return;
-    }
     var first = !chat.history.length;
     chat.history.push({ role: 'user', content: first ? SYSTEM + '\n\nCURRENT ANALYSIS:\n' + JSON.stringify(contextSummary()) + '\n\nQUESTION: ' + text : text });
     var bot = addMsg('bot', 'Thinking…'); chat.busy = true; $('#chatSend').disabled = true;
     chat.abort = new AbortController();
-    var tools = chatTools(bot);
+    var tools = TOOLS.map(function (tl) { return { name: tl.name, description: tl.description, inputSchema: tl.inputSchema, execute: async function (input) { var note = h('div', { class: 'msg tool', text: '↳ ' + tl.name + (input && input.channel ? ' · ' + input.board + ' / ' + input.channel : '') }); $('#chatLog').insertBefore(note, bot); try { return tl.execute(input || {}); } catch (e) { note.textContent += ' — ' + e.message; throw e; } } }; });
     try {
       var res = await sampleCap(chat.history, { tools: tools, signal: chat.abort.signal, cache: false, onText: function (p) { bot.innerHTML = md(p.text || 'Thinking…'); $('#chatLog').appendChild(bot); scrollChat(); } });
       bot.innerHTML = md(res.text || '(no answer)'); $('#chatLog').appendChild(bot);
@@ -1010,29 +928,22 @@
   $('#target').addEventListener('change', function (e) { S.settings.target = e.target.value; store.set('target', e.target.value); renderTab(); });
   $('#groundTemp').addEventListener('change', function (e) { S.settings.groundTemp = +e.target.value || 15; store.set('groundTemp', S.settings.groundTemp); S.sources.forEach(analyzeSource); render(); });
   $('#refSel').addEventListener('change', function (e) { S.settings.ref = e.target.value; renderTab(); });
-  $('#clearBtn').addEventListener('click', function () { S.files = []; S.sources = []; chat.history = []; apiChat.messages = []; $('#chatLog').innerHTML = ''; document.body.classList.remove('chat-open'); render(); });
+  $('#clearBtn').addEventListener('click', function () { S.files = []; S.sources = []; chat.history = []; $('#chatLog').innerHTML = ''; document.body.classList.remove('chat-open'); render(); });
   $('#exportBtn').addEventListener('click', exportSummary);
   $('#profilesBtn').addEventListener('click', openProfiles);
   $('#launchName').value = store.get('launchName', '');
   $('#launchName').addEventListener('change', function (e) { store.set('launchName', e.target.value); });
-  $('#chatFab').addEventListener('click', function () { document.body.classList.add('chat-open'); updateKeyUi(); updateSuggestions(); setTimeout(function () { $('#chatInput').focus(); window.dispatchEvent(new Event('resize')); }, 220); });
+  $('#chatFab').addEventListener('click', function () { document.body.classList.add('chat-open'); updateSuggestions(); setTimeout(function () { $('#chatInput').focus(); window.dispatchEvent(new Event('resize')); }, 220); });
   $('#chatClose').addEventListener('click', function () { document.body.classList.remove('chat-open'); });
-  $('#chatClear').addEventListener('click', function () { if (chat.abort) chat.abort.abort(); chat.history = []; apiChat.messages = []; $('#chatLog').innerHTML = ''; updateSuggestions(); });
+  $('#chatClear').addEventListener('click', function () { if (chat.abort) chat.abort.abort(); chat.history = []; $('#chatLog').innerHTML = ''; updateSuggestions(); });
   $('#chatSend').addEventListener('click', sendChat);
-  $('#chatKeyBtn').addEventListener('click', function () { var box = $('#chatKeyBox'); if (box.classList.contains('hidden')) updateKeyUi(true); else if (apiKey) box.classList.add('hidden'); });
-  $('#chatKeyBox').addEventListener('submit', function (e) {
-    e.preventDefault(); var k = $('#chatKeyInput').value.trim();
-    if (!/^sk-ant-/.test(k)) { showKeyError('That does not look like an Anthropic API key (it should start with sk-ant-).'); return; }
-    setKey(k, $('#chatKeyRemember').checked); $('#chatKeyInput').value = ''; updateKeyUi(); $('#chatInput').focus();
-  });
-  $('#chatKeyForget').addEventListener('click', function () { setKey(null); $('#chatKeyInput').value = ''; updateKeyUi(true); toast('API key removed from this browser'); });
   $('#chatInput').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } });
   $('#chatInput').addEventListener('input', function (e) { e.target.style.height = 'auto'; e.target.style.height = Math.min(160, e.target.scrollHeight) + 'px'; });
   if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { if (S.sources.length) renderTab(); });
 
   // capabilities (only present when published as an artifact)
   if (window.claude && window.claude.use) {
-    window.claude.use('sample').then(function (s) { sampleCap = s; updateKeyUi(); if (S.sources.length) render(); }).catch(function () { });
+    window.claude.use('sample').then(function (s) { sampleCap = s; if (S.sources.length) render(); }).catch(function () { });
     window.claude.use('downloads').then(function (d) { downloadsCap = d; if (S.sources.length) render(); }).catch(function () { });
   }
   window.__FLL = { S: S, addFiles: addFiles, rebuild: rebuild, contextSummary: contextSummary, TOOLS: TOOLS };

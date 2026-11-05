@@ -41,6 +41,28 @@ Profiles (column fixes + board names) are saved in your browser only. To share t
 
 ---
 
+## Asking Claude about a flight (runs through Claude)
+
+The same app is also published as a **claude.ai artifact**. Opened there, it has a built-in **Flight assistant** chat that runs on your own claude.ai account (Pro/Team plan). No API key and no extra cost: questions count toward your normal claude.ai usage.
+
+**Team link:** https://claude.ai/artifact/JdyFm8sRKWSsWzRjyAWSRq. Ask the team lead to share it with you if it doesn't open.
+
+1. Open the link while signed in to claude.ai.
+2. Drop the launch's log files, as on the live site.
+3. Click **Ask Claude about this flight** (bottom right). The button appears once a log is loaded.
+4. The first time, claude.ai asks you to allow the page to use Claude: click **Allow**.
+
+The assistant reads the computed analysis and can pull exact values from any channel, compute stats over a time window and draw plots right in the chat. Try *"Summarise this flight for our EuRoC report"*, *"Why do the boards disagree on max velocity?"* or *"How did the airbrakes behave?"*.
+
+Notes:
+- Use the app's own **Ask Claude about this flight** button, not claude.ai's **Chat** button in the top bar. That one starts a normal Claude conversation that can't see your loaded logs.
+- Log files are still processed only in your browser. The assistant receives the analysis summary and the specific values it asks for.
+- The chat is not available on the GitHub Pages site. Sites outside claude.ai can't use a Claude subscription.
+
+**Updating the artifact after a code change:** run `node build.js`, then republish `dist/index.html` to the same artifact (e.g. ask Claude Code to "republish dist/index.html to the Flight Log Lab artifact"). The artifact must keep the `sample` (Claude) and `downloads` capabilities turned on.
+
+---
+
 ## Running it locally
 
 ### Just open it
@@ -60,7 +82,7 @@ Requires [Node.js](https://nodejs.org/) (v18+).
 ```bash
 git clone https://github.com/WhiteNoise-Ntua/Flight-Log-Lab.git
 cd Flight-Log-Lab
-npm install          # one time: downloads uPlot (charts), the Anthropic SDK and esbuild
+npm install          # one time: downloads the charting library (uPlot)
 node build.js        # bundles src/ into dist/index.html
 ```
 
@@ -96,8 +118,7 @@ The site updates about a minute after the push (watch the **Actions** tab).
 src/core.js         Parsers (CSV, CATS .cfl), column auto-detection, unit conversion, flight analysis
 src/app.js          User interface: loading/merging files, charts, tabs, column editor, profiles, export
 src/template.html   Page layout and styles
-src/claude-sdk.js   Entry point that bundles the official Anthropic SDK for the browser
-build.js            Bundles everything (incl. uPlot and the Anthropic SDK) into one self-contained dist/index.html
+build.js            Bundles everything into one self-contained dist/index.html
 test.js             Runs the analysis on log files in a folder and prints the results
 docs/index.html     Published copy served by GitHub Pages
 ```
@@ -109,7 +130,6 @@ docs/index.html     Published copy served by GitHub Pages
 ---
 
 ## Notes and limitations
-- The **Claude assistant** works everywhere. Inside a claude.ai artifact it uses the artifact's built-in Claude access. On GitHub Pages each user pastes their own Anthropic API key (from console.anthropic.com) in the chat panel; the key is stored only in their browser and requests go straight to `api.anthropic.com`, billed to that key.
-- The **CSV/PNG download buttons** only work when the page is opened as a claude.ai artifact. On GitHub Pages, “Export summary” copies the CSV to the clipboard instead.
+- The **Claude assistant** and the **CSV/PNG download buttons** only work when the page is opened as a claude.ai artifact. On GitHub Pages, “Export summary” copies the CSV to the clipboard instead.
 - CATS Vega pyro/action names and the battery scale are decoded from the binary format on a best-effort basis.
 - Board temperature sensors measure the electronics bay, not ambient air — set the real ground temperature in the settings row for accurate Mach numbers.

@@ -1,8 +1,11 @@
 const fs=require('fs');
+const esbuild=require('esbuild');
+const sdk=esbuild.buildSync({entryPoints:['src/claude-sdk.js'],bundle:true,minify:true,format:'iife',platform:'browser',target:'es2020',write:false,legalComments:'none'}).outputFiles[0].text;
 let t=fs.readFileSync('src/template.html','utf8');
 const rep=(k,v)=>{t=t.split(k).join(v.replace(/<\/script/gi,'<\\/script'));};
 rep('/*UPLOT_CSS*/',fs.readFileSync('node_modules/uplot/dist/uPlot.min.css','utf8'));
 rep('/*UPLOT_JS*/',fs.readFileSync('node_modules/uplot/dist/uPlot.iife.min.js','utf8'));
+rep('/*CLAUDE_SDK_JS*/',sdk);
 rep('/*CORE_JS*/',fs.readFileSync('src/core.js','utf8'));
 rep('/*APP_JS*/',fs.readFileSync('src/app.js','utf8'));
 fs.mkdirSync('dist',{recursive:true});fs.writeFileSync('dist/index.html',t);console.log('built',t.length);

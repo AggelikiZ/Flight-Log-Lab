@@ -60,7 +60,7 @@ Requires [Node.js](https://nodejs.org/) (v18+).
 ```bash
 git clone https://github.com/WhiteNoise-Ntua/Flight-Log-Lab.git
 cd Flight-Log-Lab
-npm install          # one time: downloads the charting library (uPlot)
+npm install          # one time: downloads uPlot (charts), the Anthropic SDK and esbuild
 node build.js        # bundles src/ into dist/index.html
 ```
 
@@ -96,7 +96,8 @@ The site updates about a minute after the push (watch the **Actions** tab).
 src/core.js         Parsers (CSV, CATS .cfl), column auto-detection, unit conversion, flight analysis
 src/app.js          User interface: loading/merging files, charts, tabs, column editor, profiles, export
 src/template.html   Page layout and styles
-build.js            Bundles everything into one self-contained dist/index.html
+src/claude-sdk.js   Entry point that bundles the official Anthropic SDK for the browser
+build.js            Bundles everything (incl. uPlot and the Anthropic SDK) into one self-contained dist/index.html
 test.js             Runs the analysis on log files in a folder and prints the results
 docs/index.html     Published copy served by GitHub Pages
 ```
@@ -108,6 +109,7 @@ docs/index.html     Published copy served by GitHub Pages
 ---
 
 ## Notes and limitations
-- The **Claude assistant** and the **CSV/PNG download buttons** only work when the page is opened as a claude.ai artifact. On GitHub Pages, “Export summary” copies the CSV to the clipboard instead.
+- The **Claude assistant** works everywhere. Inside a claude.ai artifact it uses the artifact's built-in Claude access. On GitHub Pages each user pastes their own Anthropic API key (from console.anthropic.com) in the chat panel; the key is stored only in their browser and requests go straight to `api.anthropic.com`, billed to that key.
+- The **CSV/PNG download buttons** only work when the page is opened as a claude.ai artifact. On GitHub Pages, “Export summary” copies the CSV to the clipboard instead.
 - CATS Vega pyro/action names and the battery scale are decoded from the binary format on a best-effort basis.
 - Board temperature sensors measure the electronics bay, not ambient air — set the real ground temperature in the settings row for accurate Mach numbers.

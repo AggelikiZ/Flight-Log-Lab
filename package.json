@@ -1,0 +1,1 @@
+{ "name": "flight-log-lab", "version": "0.1.0", "private": true, "scripts": { "build": "node build.js", "test": "node test.js" }, "dependencies": { "uplot": "1.6.31" } }

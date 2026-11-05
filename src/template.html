@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flight Log Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>/*UPLOT_CSS*/</style>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0e1012; --surface-1: #16181b; --surface-2: #1d2024; --surface-3: #25292e;
+  --border: #2c3036; --border-strong: #3a3f46;
+  --text-primary: #eeece6; --text-secondary: #b3b1a8; --text-muted: #85837b;
+  --accent: #3987e5; --accent-ink: #9cc6f7;
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+  --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+  --good: #3fa66a; --warning: #d79a1e; --critical: #e0605e; --info: #6da7ec;
+  --grid: rgba(255,255,255,0.06); --axis: #85837b;
+  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --r: 10px;
+}
+@media (prefers-color-scheme: light) {
+  :root:where(:not([data-theme="dark"])) {
+    color-scheme: light;
+    --bg: #f3f2ee; --surface-1: #fcfcfb; --surface-2: #f4f3ef; --surface-3: #eae8e2;
+    --border: #e0ded7; --border-strong: #cfccc3;
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #77756f;
+    --accent: #2a78d6; --accent-ink: #1c5cab;
+    --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100;
+    --series-5: #e87ba4; --series-6: #008300; --series-7: #6250d6; --series-8: #e34948;
+    --good: #23824b; --warning: #a86d00; --critical: #c43c3a; --info: #2a78d6;
+    --grid: rgba(0,0,0,0.06); --axis: #77756f;
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f3f2ee; --surface-1: #fcfcfb; --surface-2: #f4f3ef; --surface-3: #eae8e2;
+  --border: #e0ded7; --border-strong: #cfccc3;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #77756f;
+  --accent: #2a78d6; --accent-ink: #1c5cab;
+  --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100;
+  --series-5: #e87ba4; --series-6: #008300; --series-7: #6250d6; --series-8: #e34948;
+  --good: #23824b; --warning: #a86d00; --critical: #c43c3a; --info: #2a78d6;
+  --grid: rgba(0,0,0,0.06); --axis: #77756f;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text-primary); font-family: var(--sans); font-size: 14px; line-height: 1.45; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.mono, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+a { color: var(--accent-ink); }
+
+/* header */
+.topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 16px; padding: 10px 20px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .01em; white-space: nowrap; }
+.brand svg { color: var(--accent); }
+.launch-name { flex: 1; min-width: 120px; max-width: 360px; background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 5px 8px; color: var(--text-secondary); }
+.launch-name:hover, .launch-name:focus { border-color: var(--border); outline: none; color: var(--text-primary); }
+.top-actions { display: flex; gap: 8px; margin-left: auto; align-items: center; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--border-strong); background: var(--surface-2); cursor: pointer; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.btn:hover { background: var(--surface-3); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.ghost:hover { background: var(--surface-2); color: var(--text-primary); }
+.btn.small { padding: 3px 8px; font-size: 12px; }
+.btn[disabled] { opacity: .5; cursor: default; }
+
+main { padding: 18px 20px 80px; max-width: 1480px; margin: 0 auto; }
+body.chat-open main { margin-right: 420px; }
+
+/* drop zone */
+.drop { border: 1.5px dashed var(--border-strong); border-radius: 14px; padding: 48px 24px; text-align: center; background: var(--surface-1); transition: border-color .15s, background .15s; cursor: pointer; }
+.drop.compact { padding: 12px 16px; display: flex; align-items: center; gap: 12px; text-align: left; border-radius: 10px; }
+.drop.drag { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface-1)); }
+.drop h2 { margin: 10px 0 6px; font-size: 20px; }
+.drop p { margin: 4px 0; color: var(--text-secondary); }
+.drop .formats { margin-top: 14px; font-size: 12.5px; color: var(--text-muted); }
+.drop.compact h2 { font-size: 14px; margin: 0; font-weight: 600; }
+.drop.compact p { margin: 0; font-size: 13px; }
+.hidden { display: none !important; }
+.busy { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); }
+.spinner { width: 14px; height: 14px; border: 2px solid var(--border-strong); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* sources */
+.sources { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 6px; }
+.src { display: flex; align-items: flex-start; gap: 10px; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r); padding: 10px 12px; min-width: 250px; flex: 1 1 260px; max-width: 420px; }
+.swatch { width: 10px; height: 10px; border-radius: 3px; margin-top: 6px; flex: none; }
+.src .body { flex: 1; min-width: 0; }
+.src .label { font-weight: 600; background: transparent; border: 1px solid transparent; border-radius: 5px; padding: 1px 4px; margin-left: -5px; width: 100%; }
+.src .label:hover, .src .label:focus { border-color: var(--border); outline: none; }
+.src .meta { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+.src .files { color: var(--text-secondary); font-size: 12px; overflow-wrap: anywhere; }
+.src .row { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--surface-3); color: var(--text-secondary); margin-right: 4px; }
+
+/* settings row */
+.settings { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 10px 0 18px; color: var(--text-secondary); font-size: 13px; }
+.settings label { display: inline-flex; align-items: center; gap: 6px; }
+.settings input, .settings select { background: var(--surface-1); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; width: 90px; }
+.settings select { width: auto; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface-1); padding: 5px 11px; cursor: pointer; font-size: 12.5px; color: var(--text-secondary); }
+.seg button + button { border-left: 1px solid var(--border-strong); }
+.seg button.on { background: var(--surface-3); color: var(--text-primary); font-weight: 600; }
+
+/* tabs */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 18px; overflow-x: auto; }
+.tabs button { background: none; border: 0; padding: 9px 14px; cursor: pointer; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 500; white-space: nowrap; }
+.tabs button.on { color: var(--text-primary); border-bottom-color: var(--accent); }
+.tabs button:hover { color: var(--text-primary); }
+
+/* tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-bottom: 18px; }
+.tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; }
+.tile .k { font-size: 12px; color: var(--text-secondary); }
+.tile .v { font-family: var(--mono); font-size: 24px; font-weight: 600; margin-top: 2px; letter-spacing: -0.01em; }
+.tile .v small { font-size: 13px; color: var(--text-secondary); font-weight: 500; margin-left: 3px; }
+.tile .s { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+.tile.hero { grid-column: span 2; }
+.tile.hero .v { font-size: 34px; }
+.delta-pos { color: var(--good); } .delta-neg { color: var(--warning); }
+
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; margin-bottom: 16px; }
+.card h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.card h3 .sub { font-weight: 400; color: var(--text-muted); font-size: 12px; }
+.card h3 .spacer { flex: 1; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 16px; }
+.grid2 > .card { margin-bottom: 0; }
+
+table.t { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.t th, table.t td { padding: 6px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+table.t th { font-weight: 600; color: var(--text-secondary); font-size: 12px; position: sticky; top: 0; background: var(--surface-1); }
+table.t td.n, table.t th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+table.t tr:hover td { background: var(--surface-2); }
+.dim { color: var(--text-muted); }
+.scroll { max-height: 520px; overflow: auto; }
+
+.notes { display: flex; flex-direction: column; gap: 6px; }
+.note { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); font-size: 13px; }
+.note .ico { flex: none; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #fff; margin-top: 1px; }
+.note.warn .ico { background: var(--warning); } .note.info .ico { background: var(--info); } .note.crit .ico { background: var(--critical); }
+.note .who { font-weight: 600; margin-right: 4px; }
+
+/* charts */
+.chart { width: 100%; position: relative; }
+.chart-tools { display: flex; gap: 6px; }
+.u-legend { font-size: 12px; text-align: left !important; padding: 4px 0 0 4px; }
+.u-legend .u-series { padding: 1px 8px 1px 0; }
+.u-legend .u-series th { font-weight: 500; color: var(--text-secondary); }
+.u-legend .u-value { font-family: var(--mono); color: var(--text-primary); }
+.u-legend .u-marker { border-radius: 2px; width: 10px; height: 3px; margin-top: -2px; }
+.u-select { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.hint { font-size: 12px; color: var(--text-muted); }
+
+/* track */
+.track-wrap { position: relative; }
+canvas.track { width: 100%; height: 420px; display: block; border-radius: 8px; background: var(--surface-2); }
+
+/* explorer */
+.picker { display: flex; flex-wrap: wrap; gap: 6px; max-height: 210px; overflow: auto; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); }
+.pick { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface-1); cursor: pointer; user-select: none; }
+.pick.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--surface-1)); }
+.pick .sw { width: 8px; height: 8px; border-radius: 2px; }
+
+/* modal */
+.modal-back { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 50; display: grid; place-items: center; padding: 20px; }
+.modal { background: var(--surface-1); border: 1px solid var(--border-strong); border-radius: 14px; width: min(1100px, 100%); max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+.modal header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+.modal header h2 { font-size: 16px; margin: 0; flex: 1; }
+.modal .content { padding: 12px 18px; overflow: auto; }
+.modal footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+.modal select, .modal input, .modal textarea { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; }
+.conf { font-size: 11px; padding: 1px 6px; border-radius: 4px; }
+.conf.high { background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--good); }
+.conf.med { background: color-mix(in srgb, var(--warning) 22%, transparent); color: var(--warning); }
+.conf.low { background: var(--surface-3); color: var(--text-muted); }
+
+/* chat */
+.chat { position: fixed; top: 0; right: 0; bottom: 0; width: 420px; background: var(--surface-1); border-left: 1px solid var(--border); z-index: 40; display: flex; flex-direction: column; transform: translateX(100%); transition: transform .2s ease; }
+body.chat-open .chat { transform: none; }
+.chat header { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+.chat header h2 { margin: 0; font-size: 15px; flex: 1; }
+.chat .log { flex: 1; overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.msg { max-width: 92%; padding: 9px 12px; border-radius: 12px; font-size: 13.5px; line-height: 1.5; overflow-wrap: anywhere; }
+.msg.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+.msg.bot { align-self: flex-start; background: var(--surface-2); border-bottom-left-radius: 4px; }
+.msg.bot p { margin: 0 0 8px; } .msg.bot p:last-child { margin-bottom: 0; }
+.msg.bot ul, .msg.bot ol { margin: 4px 0 8px; padding-left: 20px; }
+.msg.bot code { font-family: var(--mono); font-size: 12px; background: var(--surface-3); padding: 1px 4px; border-radius: 4px; }
+.msg.bot table { border-collapse: collapse; font-size: 12px; margin: 6px 0; }
+.msg.bot td, .msg.bot th { border: 1px solid var(--border); padding: 3px 6px; }
+.msg.tool { align-self: flex-start; font-size: 11.5px; color: var(--text-muted); padding: 0 4px; font-family: var(--mono); }
+.chat .compose { border-top: 1px solid var(--border); padding: 10px; display: flex; gap: 8px; align-items: flex-end; }
+.chat textarea { flex: 1; resize: none; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; min-height: 40px; max-height: 160px; }
+.chat .suggest { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 10px; }
+.chat .suggest button { font-size: 12px; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface-2); cursor: pointer; color: var(--text-secondary); }
+.chat .suggest button:hover { color: var(--text-primary); }
+.fab { position: fixed; right: 20px; bottom: 20px; z-index: 35; box-shadow: 0 6px 20px rgba(0,0,0,.3); padding: 10px 16px; border-radius: 999px; }
+body.chat-open .fab { display: none; }
+
+.empty-state { color: var(--text-muted); padding: 30px; text-align: center; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--surface-3); border: 1px solid var(--border-strong); padding: 8px 14px; border-radius: 8px; z-index: 60; font-size: 13px; }
+@media (max-width: 900px) { body.chat-open main { margin-right: 0; } .chat { width: 100%; } .tile.hero { grid-column: span 1; } .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2c3 2.5 4.5 6 4.5 10.5V17h-9v-4.5C7.5 8 9 4.5 12 2z"/><path d="M7.5 13 4 16v3l3.5-2M16.5 13l3.5 3v3l-3.5-2M10 20.5c.6 1 1.3 1.5 2 1.5s1.4-.5 2-1.5"/><circle cx="12" cy="9" r="1.6"/></svg>
+    Flight Log Lab
+  </div>
+  <input class="launch-name" id="launchName" placeholder="Launch name, e.g. EuRoC 2026 – Flight 1" aria-label="Launch name">
+  <div class="top-actions">
+    <button class="btn ghost" id="addFilesBtn" title="Add more log files">+ Add files</button>
+    <button class="btn ghost" id="exportBtn" disabled>Export summary</button>
+    <button class="btn ghost" id="profilesBtn">Profiles</button>
+    <button class="btn ghost" id="clearBtn" disabled>Clear</button>
+  </div>
+</header>
+<main>
+  <input type="file" id="fileInput" multiple class="hidden" accept=".csv,.txt,.tsv,.log,.cfl,.bin,.dat">
+  <div class="drop" id="drop" role="button" tabindex="0">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted)" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+    <div><h2>Drop your flight logs here</h2>
+    <p>Drop all the boards from one launch together. Each file's columns, units and flight events are detected automatically.</p>
+    <p class="formats">CSV / TSV from any flight computer · CATS Vega <span class="mono">.cfl</span> binary logs · Files that share a clock are merged into one board automatically.<br>Everything is processed in your browser — files are not uploaded anywhere.</p></div>
+  </div>
+  <div id="busy" class="busy hidden" style="margin-top:12px"><div class="spinner"></div><span id="busyText">Reading…</span></div>
+
+  <div id="app" class="hidden">
+    <div class="sources" id="sources"></div>
+    <div class="settings">
+      <label>Target apogee <input type="number" id="target" placeholder="e.g. 3000"> m</label>
+      <label>Ground temperature <input type="number" id="groundTemp" value="20"> °C</label>
+      <label>Reference board <select id="refSel"></select></label>
+      <span class="hint">Times are T+ seconds from each board's detected liftoff.</span>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="overview" class="on">Overview</button>
+      <button data-tab="plots">Flight plots</button>
+      <button data-tab="boards">Board sensors</button>
+      <button data-tab="events">Events</button>
+      <button data-tab="gps">GPS track</button>
+      <button data-tab="explore">Channel explorer</button>
+    </nav>
+    <section id="tab-overview"></section>
+    <section id="tab-plots" class="hidden"></section>
+    <section id="tab-boards" class="hidden"></section>
+    <section id="tab-events" class="hidden"></section>
+    <section id="tab-gps" class="hidden"></section>
+    <section id="tab-explore" class="hidden"></section>
+  </div>
+</main>
+
+<button class="btn primary fab hidden" id="chatFab">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>
+  Ask Claude about this flight
+</button>
+<aside class="chat" id="chat" aria-label="Flight analysis assistant">
+  <header>
+    <h2>Flight assistant</h2>
+    <button class="btn ghost small" id="chatClear" title="Start a new conversation">New chat</button>
+    <button class="btn ghost small" id="chatClose" aria-label="Close">✕</button>
+  </header>
+  <div class="log" id="chatLog"></div>
+  <div class="suggest" id="chatSuggest"></div>
+  <div class="compose">
+    <textarea id="chatInput" rows="1" placeholder="Ask about the flight data…"></textarea>
+    <button class="btn primary" id="chatSend">Send</button>
+  </div>
+</aside>
+
+<script>/*UPLOT_JS*/</script>
+<script>/*CORE_JS*/</script>
+<script>/*APP_JS*/</script>
+</body>
+</html>

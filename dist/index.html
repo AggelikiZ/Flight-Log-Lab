@@ -1,0 +1,2055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flight Log Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>.uplot, .uplot *, .uplot *::before, .uplot *::after {box-sizing: border-box;}.uplot {font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";line-height: 1.5;width: min-content;}.u-title {text-align: center;font-size: 18px;font-weight: bold;}.u-wrap {position: relative;user-select: none;}.u-over, .u-under {position: absolute;}.u-under {overflow: hidden;}.uplot canvas {display: block;position: relative;width: 100%;height: 100%;}.u-axis {position: absolute;}.u-legend {font-size: 14px;margin: auto;text-align: center;}.u-inline {display: block;}.u-inline * {display: inline-block;}.u-inline tr {margin-right: 16px;}.u-legend th {font-weight: 600;}.u-legend th > * {vertical-align: middle;display: inline-block;}.u-legend .u-marker {width: 1em;height: 1em;margin-right: 4px;background-clip: padding-box !important;}.u-inline.u-live th::after {content: ":";vertical-align: middle;}.u-inline:not(.u-live) .u-value {display: none;}.u-series > * {padding: 4px;}.u-series th {cursor: pointer;}.u-legend .u-off > * {opacity: 0.3;}.u-select {background: rgba(0,0,0,0.07);position: absolute;pointer-events: none;}.u-cursor-x, .u-cursor-y {position: absolute;left: 0;top: 0;pointer-events: none;will-change: transform;}.u-hz .u-cursor-x, .u-vt .u-cursor-y {height: 100%;border-right: 1px dashed #607D8B;}.u-hz .u-cursor-y, .u-vt .u-cursor-x {width: 100%;border-bottom: 1px dashed #607D8B;}.u-cursor-pt {position: absolute;top: 0;left: 0;border-radius: 50%;border: 0 solid;pointer-events: none;will-change: transform;/*this has to be !important since we set inline "background" shorthand */background-clip: padding-box !important;}.u-axis.u-off, .u-select.u-off, .u-cursor-x.u-off, .u-cursor-y.u-off, .u-cursor-pt.u-off {display: none;}</style>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0e1012; --surface-1: #16181b; --surface-2: #1d2024; --surface-3: #25292e;
+  --border: #2c3036; --border-strong: #3a3f46;
+  --text-primary: #eeece6; --text-secondary: #b3b1a8; --text-muted: #85837b;
+  --accent: #3987e5; --accent-ink: #9cc6f7;
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+  --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+  --good: #3fa66a; --warning: #d79a1e; --critical: #e0605e; --info: #6da7ec;
+  --grid: rgba(255,255,255,0.06); --axis: #85837b;
+  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --r: 10px;
+}
+@media (prefers-color-scheme: light) {
+  :root:where(:not([data-theme="dark"])) {
+    color-scheme: light;
+    --bg: #f3f2ee; --surface-1: #fcfcfb; --surface-2: #f4f3ef; --surface-3: #eae8e2;
+    --border: #e0ded7; --border-strong: #cfccc3;
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #77756f;
+    --accent: #2a78d6; --accent-ink: #1c5cab;
+    --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100;
+    --series-5: #e87ba4; --series-6: #008300; --series-7: #6250d6; --series-8: #e34948;
+    --good: #23824b; --warning: #a86d00; --critical: #c43c3a; --info: #2a78d6;
+    --grid: rgba(0,0,0,0.06); --axis: #77756f;
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f3f2ee; --surface-1: #fcfcfb; --surface-2: #f4f3ef; --surface-3: #eae8e2;
+  --border: #e0ded7; --border-strong: #cfccc3;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #77756f;
+  --accent: #2a78d6; --accent-ink: #1c5cab;
+  --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100;
+  --series-5: #e87ba4; --series-6: #008300; --series-7: #6250d6; --series-8: #e34948;
+  --good: #23824b; --warning: #a86d00; --critical: #c43c3a; --info: #2a78d6;
+  --grid: rgba(0,0,0,0.06); --axis: #77756f;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text-primary); font-family: var(--sans); font-size: 14px; line-height: 1.45; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.mono, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+a { color: var(--accent-ink); }
+
+/* header */
+.topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 16px; padding: 10px 20px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .01em; white-space: nowrap; }
+.brand svg { color: var(--accent); }
+.launch-name { flex: 1; min-width: 120px; max-width: 360px; background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 5px 8px; color: var(--text-secondary); }
+.launch-name:hover, .launch-name:focus { border-color: var(--border); outline: none; color: var(--text-primary); }
+.top-actions { display: flex; gap: 8px; margin-left: auto; align-items: center; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--border-strong); background: var(--surface-2); cursor: pointer; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.btn:hover { background: var(--surface-3); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-secondary); }
+.btn.ghost:hover { background: var(--surface-2); color: var(--text-primary); }
+.btn.small { padding: 3px 8px; font-size: 12px; }
+.btn[disabled] { opacity: .5; cursor: default; }
+
+main { padding: 18px 20px 80px; max-width: 1480px; margin: 0 auto; }
+body.chat-open main { margin-right: 420px; }
+
+/* drop zone */
+.drop { border: 1.5px dashed var(--border-strong); border-radius: 14px; padding: 48px 24px; text-align: center; background: var(--surface-1); transition: border-color .15s, background .15s; cursor: pointer; }
+.drop.compact { padding: 12px 16px; display: flex; align-items: center; gap: 12px; text-align: left; border-radius: 10px; }
+.drop.drag { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface-1)); }
+.drop h2 { margin: 10px 0 6px; font-size: 20px; }
+.drop p { margin: 4px 0; color: var(--text-secondary); }
+.drop .formats { margin-top: 14px; font-size: 12.5px; color: var(--text-muted); }
+.drop.compact h2 { font-size: 14px; margin: 0; font-weight: 600; }
+.drop.compact p { margin: 0; font-size: 13px; }
+.hidden { display: none !important; }
+.busy { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); }
+.spinner { width: 14px; height: 14px; border: 2px solid var(--border-strong); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* sources */
+.sources { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 6px; }
+.src { display: flex; align-items: flex-start; gap: 10px; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r); padding: 10px 12px; min-width: 250px; flex: 1 1 260px; max-width: 420px; }
+.swatch { width: 10px; height: 10px; border-radius: 3px; margin-top: 6px; flex: none; }
+.src .body { flex: 1; min-width: 0; }
+.src .label { font-weight: 600; background: transparent; border: 1px solid transparent; border-radius: 5px; padding: 1px 4px; margin-left: -5px; width: 100%; }
+.src .label:hover, .src .label:focus { border-color: var(--border); outline: none; }
+.src .meta { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+.src .files { color: var(--text-secondary); font-size: 12px; overflow-wrap: anywhere; }
+.src .row { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--surface-3); color: var(--text-secondary); margin-right: 4px; }
+
+/* settings row */
+.settings { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 10px 0 18px; color: var(--text-secondary); font-size: 13px; }
+.settings label { display: inline-flex; align-items: center; gap: 6px; }
+.settings input, .settings select { background: var(--surface-1); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; width: 90px; }
+.settings select { width: auto; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface-1); padding: 5px 11px; cursor: pointer; font-size: 12.5px; color: var(--text-secondary); }
+.seg button + button { border-left: 1px solid var(--border-strong); }
+.seg button.on { background: var(--surface-3); color: var(--text-primary); font-weight: 600; }
+
+/* tabs */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 18px; overflow-x: auto; }
+.tabs button { background: none; border: 0; padding: 9px 14px; cursor: pointer; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 500; white-space: nowrap; }
+.tabs button.on { color: var(--text-primary); border-bottom-color: var(--accent); }
+.tabs button:hover { color: var(--text-primary); }
+
+/* tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-bottom: 18px; }
+.tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; }
+.tile .k { font-size: 12px; color: var(--text-secondary); }
+.tile .v { font-family: var(--mono); font-size: 24px; font-weight: 600; margin-top: 2px; letter-spacing: -0.01em; }
+.tile .v small { font-size: 13px; color: var(--text-secondary); font-weight: 500; margin-left: 3px; }
+.tile .s { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+.tile.hero { grid-column: span 2; }
+.tile.hero .v { font-size: 34px; }
+.delta-pos { color: var(--good); } .delta-neg { color: var(--warning); }
+
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; margin-bottom: 16px; }
+.card h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.card h3 .sub { font-weight: 400; color: var(--text-muted); font-size: 12px; }
+.card h3 .spacer { flex: 1; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 16px; }
+.grid2 > .card { margin-bottom: 0; }
+
+table.t { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.t th, table.t td { padding: 6px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+table.t th { font-weight: 600; color: var(--text-secondary); font-size: 12px; position: sticky; top: 0; background: var(--surface-1); }
+table.t td.n, table.t th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+table.t tr:hover td { background: var(--surface-2); }
+.dim { color: var(--text-muted); }
+.scroll { max-height: 520px; overflow: auto; }
+
+.notes { display: flex; flex-direction: column; gap: 6px; }
+.note { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); font-size: 13px; }
+.note .ico { flex: none; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #fff; margin-top: 1px; }
+.note.warn .ico { background: var(--warning); } .note.info .ico { background: var(--info); } .note.crit .ico { background: var(--critical); }
+.note .who { font-weight: 600; margin-right: 4px; }
+
+/* charts */
+.chart { width: 100%; position: relative; }
+.chart-tools { display: flex; gap: 6px; }
+.u-legend { font-size: 12px; text-align: left !important; padding: 4px 0 0 4px; }
+.u-legend .u-series { padding: 1px 8px 1px 0; }
+.u-legend .u-series th { font-weight: 500; color: var(--text-secondary); }
+.u-legend .u-value { font-family: var(--mono); color: var(--text-primary); }
+.u-legend .u-marker { border-radius: 2px; width: 10px; height: 3px; margin-top: -2px; }
+.u-select { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.hint { font-size: 12px; color: var(--text-muted); }
+
+/* track */
+.track-wrap { position: relative; }
+canvas.track { width: 100%; height: 420px; display: block; border-radius: 8px; background: var(--surface-2); }
+
+/* explorer */
+.picker { display: flex; flex-wrap: wrap; gap: 6px; max-height: 210px; overflow: auto; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); }
+.pick { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface-1); cursor: pointer; user-select: none; }
+.pick.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--surface-1)); }
+.pick .sw { width: 8px; height: 8px; border-radius: 2px; }
+
+/* modal */
+.modal-back { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 50; display: grid; place-items: center; padding: 20px; }
+.modal { background: var(--surface-1); border: 1px solid var(--border-strong); border-radius: 14px; width: min(1100px, 100%); max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+.modal header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+.modal header h2 { font-size: 16px; margin: 0; flex: 1; }
+.modal .content { padding: 12px 18px; overflow: auto; }
+.modal footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+.modal select, .modal input, .modal textarea { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; }
+.conf { font-size: 11px; padding: 1px 6px; border-radius: 4px; }
+.conf.high { background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--good); }
+.conf.med { background: color-mix(in srgb, var(--warning) 22%, transparent); color: var(--warning); }
+.conf.low { background: var(--surface-3); color: var(--text-muted); }
+
+/* chat */
+.chat { position: fixed; top: 0; right: 0; bottom: 0; width: 420px; background: var(--surface-1); border-left: 1px solid var(--border); z-index: 40; display: flex; flex-direction: column; transform: translateX(100%); transition: transform .2s ease; }
+body.chat-open .chat { transform: none; }
+.chat header { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+.chat header h2 { margin: 0; font-size: 15px; flex: 1; }
+.chat .log { flex: 1; overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.msg { max-width: 92%; padding: 9px 12px; border-radius: 12px; font-size: 13.5px; line-height: 1.5; overflow-wrap: anywhere; }
+.msg.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+.msg.bot { align-self: flex-start; background: var(--surface-2); border-bottom-left-radius: 4px; }
+.msg.bot p { margin: 0 0 8px; } .msg.bot p:last-child { margin-bottom: 0; }
+.msg.bot ul, .msg.bot ol { margin: 4px 0 8px; padding-left: 20px; }
+.msg.bot code { font-family: var(--mono); font-size: 12px; background: var(--surface-3); padding: 1px 4px; border-radius: 4px; }
+.msg.bot table { border-collapse: collapse; font-size: 12px; margin: 6px 0; }
+.msg.bot td, .msg.bot th { border: 1px solid var(--border); padding: 3px 6px; }
+.msg.tool { align-self: flex-start; font-size: 11.5px; color: var(--text-muted); padding: 0 4px; font-family: var(--mono); }
+.chat .compose { border-top: 1px solid var(--border); padding: 10px; display: flex; gap: 8px; align-items: flex-end; }
+.chat textarea { flex: 1; resize: none; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; min-height: 40px; max-height: 160px; }
+.chat .suggest { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 10px; }
+.chat .suggest button { font-size: 12px; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface-2); cursor: pointer; color: var(--text-secondary); }
+.chat .suggest button:hover { color: var(--text-primary); }
+.fab { position: fixed; right: 20px; bottom: 20px; z-index: 35; box-shadow: 0 6px 20px rgba(0,0,0,.3); padding: 10px 16px; border-radius: 999px; }
+body.chat-open .fab { display: none; }
+
+.empty-state { color: var(--text-muted); padding: 30px; text-align: center; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--surface-3); border: 1px solid var(--border-strong); padding: 8px 14px; border-radius: 8px; z-index: 60; font-size: 13px; }
+@media (max-width: 900px) { body.chat-open main { margin-right: 0; } .chat { width: 100%; } .tile.hero { grid-column: span 1; } .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2c3 2.5 4.5 6 4.5 10.5V17h-9v-4.5C7.5 8 9 4.5 12 2z"/><path d="M7.5 13 4 16v3l3.5-2M16.5 13l3.5 3v3l-3.5-2M10 20.5c.6 1 1.3 1.5 2 1.5s1.4-.5 2-1.5"/><circle cx="12" cy="9" r="1.6"/></svg>
+    Flight Log Lab
+  </div>
+  <input class="launch-name" id="launchName" placeholder="Launch name, e.g. EuRoC 2026 – Flight 1" aria-label="Launch name">
+  <div class="top-actions">
+    <button class="btn ghost" id="addFilesBtn" title="Add more log files">+ Add files</button>
+    <button class="btn ghost" id="exportBtn" disabled>Export summary</button>
+    <button class="btn ghost" id="profilesBtn">Profiles</button>
+    <button class="btn ghost" id="clearBtn" disabled>Clear</button>
+  </div>
+</header>
+<main>
+  <input type="file" id="fileInput" multiple class="hidden" accept=".csv,.txt,.tsv,.log,.cfl,.bin,.dat">
+  <div class="drop" id="drop" role="button" tabindex="0">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted)" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+    <div><h2>Drop your flight logs here</h2>
+    <p>Drop all the boards from one launch together. Each file's columns, units and flight events are detected automatically.</p>
+    <p class="formats">CSV / TSV from any flight computer · CATS Vega <span class="mono">.cfl</span> binary logs · Files that share a clock are merged into one board automatically.<br>Everything is processed in your browser — files are not uploaded anywhere.</p></div>
+  </div>
+  <div id="busy" class="busy hidden" style="margin-top:12px"><div class="spinner"></div><span id="busyText">Reading…</span></div>
+
+  <div id="app" class="hidden">
+    <div class="sources" id="sources"></div>
+    <div class="settings">
+      <label>Target apogee <input type="number" id="target" placeholder="e.g. 3000"> m</label>
+      <label>Ground temperature <input type="number" id="groundTemp" value="20"> °C</label>
+      <label>Reference board <select id="refSel"></select></label>
+      <span class="hint">Times are T+ seconds from each board's detected liftoff.</span>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="overview" class="on">Overview</button>
+      <button data-tab="plots">Flight plots</button>
+      <button data-tab="boards">Board sensors</button>
+      <button data-tab="events">Events</button>
+      <button data-tab="gps">GPS track</button>
+      <button data-tab="explore">Channel explorer</button>
+    </nav>
+    <section id="tab-overview"></section>
+    <section id="tab-plots" class="hidden"></section>
+    <section id="tab-boards" class="hidden"></section>
+    <section id="tab-events" class="hidden"></section>
+    <section id="tab-gps" class="hidden"></section>
+    <section id="tab-explore" class="hidden"></section>
+  </div>
+</main>
+
+<button class="btn primary fab hidden" id="chatFab">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>
+  Ask Claude about this flight
+</button>
+<aside class="chat" id="chat" aria-label="Flight analysis assistant">
+  <header>
+    <h2>Flight assistant</h2>
+    <button class="btn ghost small" id="chatClear" title="Start a new conversation">New chat</button>
+    <button class="btn ghost small" id="chatClose" aria-label="Close">✕</button>
+  </header>
+  <div class="log" id="chatLog"></div>
+  <div class="suggest" id="chatSuggest"></div>
+  <div class="compose">
+    <textarea id="chatInput" rows="1" placeholder="Ask about the flight data…"></textarea>
+    <button class="btn primary" id="chatSend">Send</button>
+  </div>
+</aside>
+
+<script>/*! https://github.com/leeoniya/uPlot (v1.6.31) */
+var uPlot=function(){"use strict";const e="u-off",l="u-label",t="width",n="height",i="top",o="bottom",s="left",r="right",u="#000",a=u+"0",f="mousemove",c="mousedown",h="mouseup",d="mouseenter",p="mouseleave",m="dblclick",g="change",x="dppxchange",w="--",_="undefined"!=typeof window,b=_?document:null,v=_?window:null,k=_?navigator:null;let y,M;function S(e,l){if(null!=l){let t=e.classList;!t.contains(l)&&t.add(l)}}function E(e,l){let t=e.classList;t.contains(l)&&t.remove(l)}function T(e,l,t){e.style[l]=t+"px"}function z(e,l,t,n){let i=b.createElement(e);return null!=l&&S(i,l),null!=t&&t.insertBefore(i,n),i}function D(e,l){return z("div",e,l)}const P=new WeakMap;function A(l,t,n,i,o){let s="translate("+t+"px,"+n+"px)";s!=P.get(l)&&(l.style.transform=s,P.set(l,s),0>t||0>n||t>i||n>o?S(l,e):E(l,e))}const W=new WeakMap;function Y(e,l,t){let n=l+t;n!=W.get(e)&&(W.set(e,n),e.style.background=l,e.style.borderColor=t)}const C=new WeakMap;function F(e,l,t,n){let i=l+""+t;i!=C.get(e)&&(C.set(e,i),e.style.height=t+"px",e.style.width=l+"px",e.style.marginLeft=n?-l/2+"px":0,e.style.marginTop=n?-t/2+"px":0)}const H={passive:!0},R={...H,capture:!0};function G(e,l,t,n){l.addEventListener(e,t,n?R:H)}function I(e,l,t){l.removeEventListener(e,t,H)}function O(e,l,t,n){let i;t=t||0;let o=2147483647>=(n=n||l.length-1);for(;n-t>1;)i=o?t+n>>1:te((t+n)/2),e>l[i]?t=i:n=i;return e-l[t]>l[n]-e?n:t}function L(e,l,t,n){for(let i=1==n?l:t;i>=l&&t>=i;i+=n)if(null!=e[i])return i;return-1}function N(e,l,t,n){let i=ue(e),o=ue(l);e==l&&(-1==i?(e*=t,l/=t):(e/=t,l*=t));let s=10==t?ae:fe,r=1==o?ie:te,u=(1==i?te:ie)(s(le(e))),a=r(s(le(l))),f=re(t,u),c=re(t,a);return 10==t&&(0>u&&(f=Ee(f,-u)),0>a&&(c=Ee(c,-a))),n||2==t?(e=f*i,l=c*o):(e=Se(e,f),l=Me(l,c)),[e,l]}function j(e,l,t,n){let i=N(e,l,t,n);return 0==e&&(i[0]=0),0==l&&(i[1]=0),i}_&&function e(){let l=devicePixelRatio;y!=l&&(y=l,M&&I(g,M,e),M=matchMedia(`(min-resolution: ${y-.001}dppx) and (max-resolution: ${y+.001}dppx)`),G(g,M,e),v.dispatchEvent(new CustomEvent(x)))}();const U=.1,B={mode:3,pad:U},V={pad:0,soft:null,mode:0},$={min:V,max:V};function J(e,l,t,n){return He(t)?K(e,l,t):(V.pad=t,V.soft=n?0:null,V.mode=n?3:0,K(e,l,$))}function q(e,l){return null==e?l:e}function K(e,l,t){let n=t.min,i=t.max,o=q(n.pad,0),s=q(i.pad,0),r=q(n.hard,-he),u=q(i.hard,he),a=q(n.soft,he),f=q(i.soft,-he),c=q(n.mode,0),h=q(i.mode,0),d=l-e,p=ae(d),m=se(le(e),le(l)),g=ae(m),x=le(g-p);(1e-24>d||x>10)&&(d=0,0!=e&&0!=l||(d=1e-24,2==c&&a!=he&&(o=0),2==h&&f!=-he&&(s=0)));let w=d||m||1e3,_=ae(w),b=re(10,te(_)),v=Ee(Se(e-w*(0==d?0==e?.1:1:o),b/10),24),k=a>e||1!=c&&(3!=c||v>a)&&(2!=c||a>v)?he:a,y=se(r,k>v&&e>=k?k:oe(k,v)),M=Ee(Me(l+w*(0==d?0==l?.1:1:s),b/10),24),S=l>f||1!=h&&(3!=h||f>M)&&(2!=h||M>f)?-he:f,E=oe(u,M>S&&S>=l?S:se(S,M));return y==E&&0==y&&(E=100),[y,E]}const X=new Intl.NumberFormat(_?k.language:"en-US"),Z=e=>X.format(e),Q=Math,ee=Q.PI,le=Q.abs,te=Q.floor,ne=Q.round,ie=Q.ceil,oe=Q.min,se=Q.max,re=Q.pow,ue=Q.sign,ae=Q.log10,fe=Q.log2,ce=(e,l=1)=>Q.asinh(e/l),he=1/0;function de(e){return 1+(0|ae((e^e>>31)-(e>>31)))}function pe(e,l,t){return oe(se(e,l),t)}function me(e){return"function"==typeof e?e:()=>e}const ge=e=>e,xe=(e,l)=>l,we=()=>null,_e=()=>!0,be=(e,l)=>e==l,ve=/\.\d*?(?=9{6,}|0{6,})/gm,ke=e=>{if(Ce(e)||Te.has(e))return e;const l=""+e,t=l.match(ve);if(null==t)return e;let n=t[0].length-1;if(-1!=l.indexOf("e-")){let[e,t]=l.split("e");return+`${ke(e)}e${t}`}return Ee(e,n)};function ye(e,l){return ke(Ee(ke(e/l))*l)}function Me(e,l){return ke(ie(ke(e/l))*l)}function Se(e,l){return ke(te(ke(e/l))*l)}function Ee(e,l=0){if(Ce(e))return e;let t=10**l;return ne(e*t*(1+Number.EPSILON))/t}const Te=new Map;function ze(e){return((""+e).split(".")[1]||"").length}function De(e,l,t,n){let i=[],o=n.map(ze);for(let s=l;t>s;s++){let l=le(s),t=Ee(re(e,s),l);for(let r=0;n.length>r;r++){let u=10==e?+`${n[r]}e${s}`:n[r]*t,a=(0>s?l:0)+(o[r]>s?o[r]:0),f=10==e?u:Ee(u,a);i.push(f),Te.set(f,a)}}return i}const Pe={},Ae=[],We=[null,null],Ye=Array.isArray,Ce=Number.isInteger;function Fe(e){return"string"==typeof e}function He(e){let l=!1;if(null!=e){let t=e.constructor;l=null==t||t==Object}return l}function Re(e){return null!=e&&"object"==typeof e}const Ge=Object.getPrototypeOf(Uint8Array),Ie="__proto__";function Oe(e,l=He){let t;if(Ye(e)){let n=e.find((e=>null!=e));if(Ye(n)||l(n)){t=Array(e.length);for(let n=0;e.length>n;n++)t[n]=Oe(e[n],l)}else t=e.slice()}else if(e instanceof Ge)t=e.slice();else if(l(e)){t={};for(let n in e)n!=Ie&&(t[n]=Oe(e[n],l))}else t=e;return t}function Le(e){let l=arguments;for(let t=1;l.length>t;t++){let n=l[t];for(let l in n)l!=Ie&&(He(e[l])?Le(e[l],Oe(n[l])):e[l]=Oe(n[l]))}return e}function Ne(e,l,t){for(let n,i=0,o=-1;l.length>i;i++){let s=l[i];if(s>o){for(n=s-1;n>=0&&null==e[n];)e[n--]=null;for(n=s+1;t>n&&null==e[n];)e[o=n++]=null}}}const je="undefined"==typeof queueMicrotask?e=>Promise.resolve().then(e):queueMicrotask,Ue=["January","February","March","April","May","June","July","August","September","October","November","December"],Be=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];function Ve(e){return e.slice(0,3)}const $e=Be.map(Ve),Je=Ue.map(Ve),qe={MMMM:Ue,MMM:Je,WWWW:Be,WWW:$e};function Ke(e){return(10>e?"0":"")+e}const Xe={YYYY:e=>e.getFullYear(),YY:e=>(e.getFullYear()+"").slice(2),MMMM:(e,l)=>l.MMMM[e.getMonth()],MMM:(e,l)=>l.MMM[e.getMonth()],MM:e=>Ke(e.getMonth()+1),M:e=>e.getMonth()+1,DD:e=>Ke(e.getDate()),D:e=>e.getDate(),WWWW:(e,l)=>l.WWWW[e.getDay()],WWW:(e,l)=>l.WWW[e.getDay()],HH:e=>Ke(e.getHours()),H:e=>e.getHours(),h:e=>{let l=e.getHours();return 0==l?12:l>12?l-12:l},AA:e=>12>e.getHours()?"AM":"PM",aa:e=>12>e.getHours()?"am":"pm",a:e=>12>e.getHours()?"a":"p",mm:e=>Ke(e.getMinutes()),m:e=>e.getMinutes(),ss:e=>Ke(e.getSeconds()),s:e=>e.getSeconds(),fff:e=>function(e){return(10>e?"00":100>e?"0":"")+e}(e.getMilliseconds())};function Ze(e,l){l=l||qe;let t,n=[],i=/\{([a-z]+)\}|[^{]+/gi;for(;t=i.exec(e);)n.push("{"==t[0][0]?Xe[t[1]]:t[0]);return e=>{let t="";for(let i=0;n.length>i;i++)t+="string"==typeof n[i]?n[i]:n[i](e,l);return t}}const Qe=(new Intl.DateTimeFormat).resolvedOptions().timeZone,el=e=>e%1==0,ll=[1,2,2.5,5],tl=De(10,-32,0,ll),nl=De(10,0,32,ll),il=nl.filter(el),ol=tl.concat(nl),sl="{YYYY}",rl="\n"+sl,ul="{M}/{D}",al="\n"+ul,fl=al+"/{YY}",cl="{aa}",hl="{h}:{mm}"+cl,dl="\n"+hl,pl=":{ss}",ml=null;function gl(e){let l=1e3*e,t=60*l,n=60*t,i=24*n,o=30*i,s=365*i;return[(1==e?De(10,0,3,ll).filter(el):De(10,-3,0,ll)).concat([l,5*l,10*l,15*l,30*l,t,5*t,10*t,15*t,30*t,n,2*n,3*n,4*n,6*n,8*n,12*n,i,2*i,3*i,4*i,5*i,6*i,7*i,8*i,9*i,10*i,15*i,o,2*o,3*o,4*o,6*o,s,2*s,5*s,10*s,25*s,50*s,100*s]),[[s,sl,ml,ml,ml,ml,ml,ml,1],[28*i,"{MMM}",rl,ml,ml,ml,ml,ml,1],[i,ul,rl,ml,ml,ml,ml,ml,1],[n,"{h}"+cl,fl,ml,al,ml,ml,ml,1],[t,hl,fl,ml,al,ml,ml,ml,1],[l,pl,fl+" "+hl,ml,al+" "+hl,ml,dl,ml,1],[e,pl+".{fff}",fl+" "+hl,ml,al+" "+hl,ml,dl,ml,1]],function(l){return(r,u,a,f,c,h)=>{let d=[],p=c>=s,m=c>=o&&s>c,g=l(a),x=Ee(g*e,3),w=Sl(g.getFullYear(),p?0:g.getMonth(),m||p?1:g.getDate()),_=Ee(w*e,3);if(m||p){let t=m?c/o:0,n=p?c/s:0,i=x==_?x:Ee(Sl(w.getFullYear()+n,w.getMonth()+t,1)*e,3),r=new Date(ne(i/e)),u=r.getFullYear(),a=r.getMonth();for(let o=0;f>=i;o++){let s=Sl(u+n*o,a+t*o,1),r=s-l(Ee(s*e,3));i=Ee((+s+r)*e,3),i>f||d.push(i)}}else{let o=i>c?c:i,s=_+(te(a)-te(x))+Me(x-_,o);d.push(s);let p=l(s),m=p.getHours()+p.getMinutes()/t+p.getSeconds()/n,g=c/n,w=h/r.axes[u]._space;for(;s=Ee(s+c,1==e?0:3),f>=s;)if(g>1){let e=te(Ee(m+g,6))%24,t=l(s).getHours()-e;t>1&&(t=-1),s-=t*n,m=(m+g)%24,.7>Ee((s-d[d.length-1])/c,3)*w||d.push(s)}else d.push(s)}return d}}]}const[xl,wl,_l]=gl(1),[bl,vl,kl]=gl(.001);function yl(e,l){return e.map((e=>e.map(((t,n)=>0==n||8==n||null==t?t:l(1==n||0==e[8]?t:e[1]+t)))))}function Ml(e,l){return(t,n,i,o,s)=>{let r,u,a,f,c,h,d=l.find((e=>s>=e[0]))||l[l.length-1];return n.map((l=>{let t=e(l),n=t.getFullYear(),i=t.getMonth(),o=t.getDate(),s=t.getHours(),p=t.getMinutes(),m=t.getSeconds(),g=n!=r&&d[2]||i!=u&&d[3]||o!=a&&d[4]||s!=f&&d[5]||p!=c&&d[6]||m!=h&&d[7]||d[1];return r=n,u=i,a=o,f=s,c=p,h=m,g(t)}))}}function Sl(e,l,t){return new Date(e,l,t)}function El(e,l){return l(e)}function Tl(e,l){return(t,n,i,o)=>null==o?w:l(e(n))}De(2,-53,53,[1]);const zl={show:!0,live:!0,isolate:!1,mount:()=>{},markers:{show:!0,width:2,stroke:function(e,l){let t=e.series[l];return t.width?t.stroke(e,l):t.points.width?t.points.stroke(e,l):null},fill:function(e,l){return e.series[l].fill(e,l)},dash:"solid"},idx:null,idxs:null,values:[]},Dl=[0,0];function Pl(e,l,t,n=!0){return e=>{0==e.button&&(!n||e.target==l)&&t(e)}}function Al(e,l,t,n=!0){return e=>{(!n||e.target==l)&&t(e)}}const Wl={show:!0,x:!0,y:!0,lock:!1,move:function(e,l,t){return Dl[0]=l,Dl[1]=t,Dl},points:{one:!1,show:function(e,l){let i=e.cursor.points,o=D(),s=i.size(e,l);T(o,t,s),T(o,n,s);let r=s/-2;T(o,"marginLeft",r),T(o,"marginTop",r);let u=i.width(e,l,s);return u&&T(o,"borderWidth",u),o},size:function(e,l){return e.series[l].points.size},width:0,stroke:function(e,l){let t=e.series[l].points;return t._stroke||t._fill},fill:function(e,l){let t=e.series[l].points;return t._fill||t._stroke}},bind:{mousedown:Pl,mouseup:Pl,click:Pl,dblclick:Pl,mousemove:Al,mouseleave:Al,mouseenter:Al},drag:{setScale:!0,x:!0,y:!1,dist:0,uni:null,click:(e,l)=>{l.stopPropagation(),l.stopImmediatePropagation()},_x:!1,_y:!1},focus:{dist:(e,l,t,n,i)=>n-i,prox:-1,bias:0},hover:{skip:[void 0],prox:null,bias:0},left:-10,top:-10,idx:null,dataIdx:null,idxs:null,event:null},Yl={show:!0,stroke:"rgba(0,0,0,0.07)",width:2},Cl=Le({},Yl,{filter:xe}),Fl=Le({},Cl,{size:10}),Hl=Le({},Yl,{show:!1}),Rl='12px system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',Gl="bold "+Rl,Il={show:!0,scale:"x",stroke:u,space:50,gap:5,size:50,labelGap:0,labelSize:30,labelFont:Gl,side:2,grid:Cl,ticks:Fl,border:Hl,font:Rl,lineGap:1.5,rotate:0},Ol={show:!0,scale:"x",auto:!1,sorted:1,min:he,max:-he,idxs:[]};function Ll(e,l){return l.map((e=>null==e?"":Z(e)))}function Nl(e,l,t,n,i,o,s){let r=[],u=Te.get(i)||0;for(let e=t=s?t:Ee(Me(t,i),u);n>=e;e=Ee(e+i,u))r.push(Object.is(e,-0)?0:e);return r}function jl(e,l,t,n,i){const o=[],s=e.scales[e.axes[l].scale].log,r=te((10==s?ae:fe)(t));i=re(s,r),10==s&&(i=ol[O(i,ol)]);let u=t,a=i*s;10==s&&(a=ol[O(a,ol)]);do{o.push(u),u+=i,10!=s||Te.has(u)||(u=Ee(u,Te.get(i))),a>u||(a=(i=u)*s,10==s&&(a=ol[O(a,ol)]))}while(n>=u);return o}function Ul(e,l,t,n,i){let o=e.scales[e.axes[l].scale].asinh,s=n>o?jl(e,l,se(o,t),n,i):[o],r=0>n||t>0?[]:[0];return(-o>t?jl(e,l,se(o,-n),-t,i):[o]).reverse().map((e=>-e)).concat(r,s)}const Bl=/./,Vl=/[12357]/,$l=/[125]/,Jl=/1/,ql=(e,l,t,n)=>e.map(((e,i)=>4==l&&0==e||i%n==0&&t.test(e.toExponential()[0>e?1:0])?e:null));function Kl(e,l,t){let n=e.axes[t],i=n.scale,o=e.scales[i],s=e.valToPos,r=n._space,u=s(10,i),a=s(9,i)-u<r?s(7,i)-u<r?s(5,i)-u<r?Jl:$l:Vl:Bl;if(a==Jl){let e=le(s(1,i)-u);if(r>e)return ql(l.slice().reverse(),o.distr,a,ie(r/e)).reverse()}return ql(l,o.distr,a,1)}function Xl(e,l,t){let n=e.axes[t],i=n.scale,o=n._space,s=e.valToPos,r=le(s(1,i)-s(2,i));return o>r?ql(l.slice().reverse(),3,Bl,ie(o/r)).reverse():l}function Zl(e,l,t,n){return null==n?w:null==l?"":Z(l)}const Ql={show:!0,scale:"y",stroke:u,space:30,gap:5,size:50,labelGap:0,labelSize:30,labelFont:Gl,side:3,grid:Cl,ticks:Fl,border:Hl,font:Rl,lineGap:1.5,rotate:0},et={scale:null,auto:!0,sorted:0,min:he,max:-he},lt=(e,l,t,n,i)=>i,tt={show:!0,auto:!0,sorted:0,gaps:lt,alpha:1,facets:[Le({},et,{scale:"x"}),Le({},et,{scale:"y"})]},nt={scale:"y",auto:!0,sorted:0,show:!0,spanGaps:!1,gaps:lt,alpha:1,points:{show:function(e,l){let{scale:t,idxs:n}=e.series[0],i=e._data[0],o=e.valToPos(i[n[0]],t,!0),s=e.valToPos(i[n[1]],t,!0);return le(s-o)/(e.series[l].points.space*y)>=n[1]-n[0]},filter:null},values:null,min:he,max:-he,idxs:[],path:null,clip:null};function it(e,l,t){return t/10}const ot={time:!0,auto:!0,distr:1,log:10,asinh:1,min:null,max:null,dir:1,ori:0},st=Le({},ot,{time:!1,ori:1}),rt={};function ut(e){let l=rt[e];return l||(l={key:e,plots:[],sub(e){l.plots.push(e)},unsub(e){l.plots=l.plots.filter((l=>l!=e))},pub(e,t,n,i,o,s,r){for(let u=0;l.plots.length>u;u++)l.plots[u]!=t&&l.plots[u].pub(e,t,n,i,o,s,r)}},null!=e&&(rt[e]=l)),l}function at(e,l,t){const n=e.mode,i=e.series[l],o=2==n?e._data[l]:e._data,s=e.scales,r=e.bbox;let u=o[0],a=2==n?o[1]:o[l],f=2==n?s[i.facets[0].scale]:s[e.series[0].scale],c=2==n?s[i.facets[1].scale]:s[i.scale],h=r.left,d=r.top,p=r.width,m=r.height,g=e.valToPosH,x=e.valToPosV;return 0==f.ori?t(i,u,a,f,c,g,x,h,d,p,m,xt,_t,vt,yt,St):t(i,u,a,f,c,x,g,d,h,m,p,wt,bt,kt,Mt,Et)}function ft(e,l){let t=0,n=0,i=q(e.bands,Ae);for(let e=0;i.length>e;e++){let o=i[e];o.series[0]==l?t=o.dir:o.series[1]==l&&(n|=1==o.dir?1:2)}return[t,1==n?-1:2==n?1:3==n?2:0]}function ct(e,l,t,n,i){let o=e.series[l],s=e.scales[2==e.mode?o.facets[1].scale:o.scale];return-1==i?s.min:1==i?s.max:3==s.distr?1==s.dir?s.min:s.max:0}function ht(e,l,t,n,i,o){return at(e,l,((e,l,s,r,u,a,f,c,h,d,p)=>{let m=e.pxRound;const g=0==r.ori?_t:bt;let x,w;1==r.dir*(0==r.ori?1:-1)?(x=t,w=n):(x=n,w=t);let _=m(a(l[x],r,d,c)),b=m(f(s[x],u,p,h)),v=m(a(l[w],r,d,c)),k=m(f(1==o?u.max:u.min,u,p,h)),y=new Path2D(i);return g(y,v,k),g(y,_,k),g(y,_,b),y}))}function dt(e,l,t,n,i,o){let s=null;if(e.length>0){s=new Path2D;const r=0==l?vt:kt;let u=t;for(let l=0;e.length>l;l++){let t=e[l];if(t[1]>t[0]){let e=t[0]-u;e>0&&r(s,u,n,e,n+o),u=t[1]}}let a=t+i-u,f=10;a>0&&r(s,u,n-f/2,a,n+o+f)}return s}function pt(e,l,t,n,i,o,s){let r=[],u=e.length;for(let a=1==i?t:n;a>=t&&n>=a;a+=i)if(null===l[a]){let f=a,c=a;if(1==i)for(;++a<=n&&null===l[a];)c=a;else for(;--a>=t&&null===l[a];)c=a;let h=o(e[f]),d=c==f?h:o(e[c]),p=f-i;h=s>0||0>p||p>=u?h:o(e[p]);let m=c+i;d=0>s||0>m||m>=u?d:o(e[m]),h>d||r.push([h,d])}return r}function mt(e){return 0==e?ge:1==e?ne:l=>ye(l,e)}function gt(e){let l=0==e?xt:wt,t=0==e?(e,l,t,n,i,o)=>{e.arcTo(l,t,n,i,o)}:(e,l,t,n,i,o)=>{e.arcTo(t,l,i,n,o)},n=0==e?(e,l,t,n,i)=>{e.rect(l,t,n,i)}:(e,l,t,n,i)=>{e.rect(t,l,i,n)};return(e,i,o,s,r,u=0,a=0)=>{0==u&&0==a?n(e,i,o,s,r):(u=oe(u,s/2,r/2),a=oe(a,s/2,r/2),l(e,i+u,o),t(e,i+s,o,i+s,o+r,u),t(e,i+s,o+r,i,o+r,a),t(e,i,o+r,i,o,a),t(e,i,o,i+s,o,u),e.closePath())}}const xt=(e,l,t)=>{e.moveTo(l,t)},wt=(e,l,t)=>{e.moveTo(t,l)},_t=(e,l,t)=>{e.lineTo(l,t)},bt=(e,l,t)=>{e.lineTo(t,l)},vt=gt(0),kt=gt(1),yt=(e,l,t,n,i,o)=>{e.arc(l,t,n,i,o)},Mt=(e,l,t,n,i,o)=>{e.arc(t,l,n,i,o)},St=(e,l,t,n,i,o,s)=>{e.bezierCurveTo(l,t,n,i,o,s)},Et=(e,l,t,n,i,o,s)=>{e.bezierCurveTo(t,l,i,n,s,o)};function Tt(){return(e,l,t,n,i)=>at(e,l,((l,o,s,r,u,a,f,c,h,d,p)=>{let m,g,{pxRound:x,points:w}=l;0==r.ori?(m=xt,g=yt):(m=wt,g=Mt);const _=Ee(w.width*y,3);let b=(w.size-w.width)/2*y,v=Ee(2*b,3),k=new Path2D,M=new Path2D,{left:S,top:E,width:T,height:z}=e.bbox;vt(M,S-v,E-v,T+2*v,z+2*v);const D=e=>{if(null!=s[e]){let l=x(a(o[e],r,d,c)),t=x(f(s[e],u,p,h));m(k,l+b,t),g(k,l,t,b,0,2*ee)}};if(i)i.forEach(D);else for(let e=t;n>=e;e++)D(e);return{stroke:_>0?k:null,fill:k,clip:M,flags:3}}))}function zt(e){return(l,t,n,i,o,s)=>{n!=i&&(o!=n&&s!=n&&e(l,t,n),o!=i&&s!=i&&e(l,t,i),e(l,t,s))}}const Dt=zt(_t),Pt=zt(bt);function At(e){const l=q(e?.alignGaps,0);return(e,t,n,i)=>at(e,t,((o,s,r,u,a,f,c,h,d,p,m)=>{let g,x,w=o.pxRound,_=e=>w(f(e,u,p,h)),b=e=>w(c(e,a,m,d));0==u.ori?(g=_t,x=Dt):(g=bt,x=Pt);const v=u.dir*(0==u.ori?1:-1),k={stroke:new Path2D,fill:null,clip:null,band:null,gaps:null,flags:1},y=k.stroke;let M,S,E,T=he,z=-he,D=_(s[1==v?n:i]),P=L(r,n,i,1*v),A=L(r,n,i,-1*v),W=_(s[P]),Y=_(s[A]),C=!1;for(let e=1==v?n:i;e>=n&&i>=e;e+=v){let l=_(s[e]),t=r[e];l==D?null!=t?(S=b(t),T==he&&(g(y,l,S),M=S),T=oe(S,T),z=se(S,z)):null===t&&(C=!0):(T!=he&&(x(y,D,T,z,M,S),E=D),null!=t?(S=b(t),g(y,l,S),T=z=M=S):(T=he,z=-he,null===t&&(C=!0)),D=l)}T!=he&&T!=z&&E!=D&&x(y,D,T,z,M,S);let[F,H]=ft(e,t);if(null!=o.fill||0!=F){let l=k.fill=new Path2D(y),n=b(o.fillTo(e,t,o.min,o.max,F));g(l,Y,n),g(l,W,n)}if(!o.spanGaps){let a=[];C&&a.push(...pt(s,r,n,i,v,_,l)),k.gaps=a=o.gaps(e,t,n,i,a),k.clip=dt(a,u.ori,h,d,p,m)}return 0!=H&&(k.band=2==H?[ht(e,t,n,i,y,-1),ht(e,t,n,i,y,1)]:ht(e,t,n,i,y,H)),k}))}function Wt(e,l,t,n,i,o,s=he){if(e.length>1){let r=null;for(let u=0,a=1/0;e.length>u;u++)if(void 0!==l[u]){if(null!=r){let l=le(e[u]-e[r]);a>l&&(a=l,s=le(t(e[u],n,i,o)-t(e[r],n,i,o)))}r=u}}return s}function Yt(e,l,t,n,i){const o=e.length;if(2>o)return null;const s=new Path2D;if(t(s,e[0],l[0]),2==o)n(s,e[1],l[1]);else{let t=Array(o),n=Array(o-1),r=Array(o-1),u=Array(o-1);for(let t=0;o-1>t;t++)r[t]=l[t+1]-l[t],u[t]=e[t+1]-e[t],n[t]=r[t]/u[t];t[0]=n[0];for(let e=1;o-1>e;e++)0===n[e]||0===n[e-1]||n[e-1]>0!=n[e]>0?t[e]=0:(t[e]=3*(u[e-1]+u[e])/((2*u[e]+u[e-1])/n[e-1]+(u[e]+2*u[e-1])/n[e]),isFinite(t[e])||(t[e]=0));t[o-1]=n[o-2];for(let n=0;o-1>n;n++)i(s,e[n]+u[n]/3,l[n]+t[n]*u[n]/3,e[n+1]-u[n]/3,l[n+1]-t[n+1]*u[n]/3,e[n+1],l[n+1])}return s}const Ct=new Set;function Ft(){for(let e of Ct)e.syncRect(!0)}_&&(G("resize",v,Ft),G("scroll",v,Ft,!0),G(x,v,(()=>{Kt.pxRatio=y})));const Ht=At(),Rt=Tt();function Gt(e,l,t,n){return(n?[e[0],e[1]].concat(e.slice(2)):[e[0]].concat(e.slice(1))).map(((e,n)=>It(e,n,l,t)))}function It(e,l,t,n){return Le({},0==l?t:n,e)}function Ot(e,l,t){return null==l?We:[l,t]}const Lt=Ot;function Nt(e,l,t){return null==l?We:J(l,t,U,!0)}function jt(e,l,t,n){return null==l?We:N(l,t,e.scales[n].log,!1)}const Ut=jt;function Bt(e,l,t,n){return null==l?We:j(l,t,e.scales[n].log,!1)}const Vt=Bt;function $t(e,l,t,n,i){let o=se(de(e),de(l)),s=l-e,r=O(i/n*s,t);do{let e=t[r],l=n*e/s;if(l>=i&&17>=o+(5>e?Te.get(e):0))return[e,l]}while(++r<t.length);return[0,0]}function Jt(e){let l,t;return[e=e.replace(/(\d+)px/,((e,n)=>(l=ne((t=+n)*y))+"px")),l,t]}function qt(e){e.show&&[e.font,e.labelFont].forEach((e=>{let l=Ee(e[2]*y,1);e[0]=e[0].replace(/[0-9.]+px/,l+"px"),e[1]=l}))}function Kt(u,g,_){const k={mode:q(u.mode,1)},M=k.mode;function P(e,l){return((3==l.distr?ae(e>0?e:l.clamp(k,e,l.min,l.max,l.key)):4==l.distr?ce(e,l.asinh):100==l.distr?l.fwd(e):e)-l._min)/(l._max-l._min)}function W(e,l,t,n){let i=P(e,l);return n+t*(-1==l.dir?1-i:i)}function C(e,l,t,n){let i=P(e,l);return n+t*(-1==l.dir?i:1-i)}function H(e,l,t,n){return 0==l.ori?W(e,l,t,n):C(e,l,t,n)}k.valToPosH=W,k.valToPosV=C;let R=!1;k.status=0;const L=k.root=D("uplot");null!=u.id&&(L.id=u.id),S(L,u.class),u.title&&(D("u-title",L).textContent=u.title);const V=z("canvas"),$=k.ctx=V.getContext("2d"),K=D("u-wrap",L);G("click",K,(e=>{e.target===Z&&(Hn!=Wn||Rn!=Yn)&&Vn.click(k,e)}),!0);const X=k.under=D("u-under",K);K.appendChild(V);const Z=k.over=D("u-over",K),te=+q((u=Oe(u)).pxAlign,1),ue=mt(te);(u.plugins||[]).forEach((e=>{e.opts&&(u=e.opts(k,u)||u)}));const fe=u.ms||.001,de=k.series=1==M?Gt(u.series||[],Ol,nt,!1):function(e,l){return e.map(((e,t)=>0==t?{}:Le({},l,e)))}(u.series||[null],tt),ge=k.axes=Gt(u.axes||[],Il,Ql,!0),ve=k.scales={},ke=k.bands=u.bands||[];ke.forEach((e=>{e.fill=me(e.fill||null),e.dir=q(e.dir,-1)}));const Me=2==M?de[1].facets[0].scale:de[0].scale,Se={axes:function(){for(let e=0;ge.length>e;e++){let l=ge[e];if(!l.show||!l._show)continue;let t,n,u=l.side,a=u%2,f=l.stroke(k,e),c=0==u||3==u?-1:1;if(l.label){let e=ne((l._lpos+l.labelGap*c)*y);dn(l.labelFont[0],f,"center",2==u?i:o),$.save(),1==a?(t=n=0,$.translate(e,ne($l+ql/2)),$.rotate((3==u?-ee:ee)/2)):(t=ne(Vl+Jl/2),n=e),$.fillText(l.label,t,n),$.restore()}let[h,d]=l._found;if(0==d)continue;let p=ve[l.scale],m=0==a?Jl:ql,g=0==a?Vl:$l,x=ne(l.gap*y),w=l._splits,_=2==p.distr?w.map((e=>un[e])):w,b=2==p.distr?un[w[1]]-un[w[0]]:h,v=l.ticks,M=l.border,S=v.show?ne(v.size*y):0,E=l._rotate*-ee/180,T=ue(l._pos*y),z=T+(S+x)*c;n=0==a?z:0,t=1==a?z:0,dn(l.font[0],f,1==l.align?s:2==l.align?r:E>0?s:0>E?r:0==a?"center":3==u?r:s,E||1==a?"middle":2==u?i:o);let D=l.font[1]*l.lineGap,P=w.map((e=>ue(H(e,p,m,g)))),A=l._values;for(let e=0;A.length>e;e++){let l=A[e];if(null!=l){0==a?t=P[e]:n=P[e],l=""+l;let i=-1==l.indexOf("\n")?[l]:l.split(/\n/gm);for(let e=0;i.length>e;e++){let l=i[e];E?($.save(),$.translate(t,n+e*D),$.rotate(E),$.fillText(l,0,0),$.restore()):$.fillText(l,t,n+e*D)}}}v.show&&kn(P,v.filter(k,_,e,d,b),a,u,T,S,Ee(v.width*y,3),v.stroke(k,e),v.dash,v.cap);let W=l.grid;W.show&&kn(P,W.filter(k,_,e,d,b),a,0==a?2:1,0==a?$l:Vl,0==a?ql:Jl,Ee(W.width*y,3),W.stroke(k,e),W.dash,W.cap),M.show&&kn([T],[1],0==a?1:0,0==a?1:2,1==a?$l:Vl,1==a?ql:Jl,Ee(M.width*y,3),M.stroke(k,e),M.dash,M.cap)}zi("drawAxes")},series:function(){Wt>0&&(de.forEach(((e,l)=>{if(l>0&&e.show&&(gn(l,!1),gn(l,!0),null==e._paths)){rn!=e.alpha&&($.globalAlpha=rn=e.alpha);let t=2==M?[0,g[l][0].length-1]:function(e){let l=pe(Yt-1,0,Wt-1),t=pe(Ft+1,0,Wt-1);for(;null==e[l]&&l>0;)l--;for(;null==e[t]&&Wt-1>t;)t++;return[l,t]}(g[l]);e._paths=e.paths(k,l,t[0],t[1]),1!=rn&&($.globalAlpha=rn=1)}})),de.forEach(((e,l)=>{if(l>0&&e.show){rn!=e.alpha&&($.globalAlpha=rn=e.alpha),null!=e._paths&&xn(l,!1);{let t=null!=e._paths?e._paths.gaps:null,n=e.points.show(k,l,Yt,Ft,t),i=e.points.filter(k,l,n,t);(n||i)&&(e.points._paths=e.points.paths(k,l,Yt,Ft,i),xn(l,!0))}1!=rn&&($.globalAlpha=rn=1),zi("drawSeries",l)}})))}},De=(u.drawOrder||["axes","series"]).map((e=>Se[e]));function Ce(e){let l=ve[e];if(null==l){let t=(u.scales||Pe)[e]||Pe;if(null!=t.from)Ce(t.from),ve[e]=Le({},ve[t.from],t,{key:e});else{l=ve[e]=Le({},e==Me?ot:st,t),l.key=e;let n=l.time,i=l.range,o=Ye(i);if((e!=Me||2==M&&!n)&&(!o||null!=i[0]&&null!=i[1]||(i={min:null==i[0]?B:{mode:1,hard:i[0],soft:i[0]},max:null==i[1]?B:{mode:1,hard:i[1],soft:i[1]}},o=!1),!o&&He(i))){let e=i;i=(l,t,n)=>null==t?We:J(t,n,e)}l.range=me(i||(n?Lt:e==Me?3==l.distr?Ut:4==l.distr?Vt:Ot:3==l.distr?jt:4==l.distr?Bt:Nt)),l.auto=me(!o&&l.auto),l.clamp=me(l.clamp||it),l._min=l._max=null}}}Ce("x"),Ce("y"),1==M&&de.forEach((e=>{Ce(e.scale)})),ge.forEach((e=>{Ce(e.scale)}));for(let e in u.scales)Ce(e);const Ge=ve[Me],Ie=Ge.distr;let Ne,Ue;0==Ge.ori?(S(L,"u-hz"),Ne=W,Ue=C):(S(L,"u-vt"),Ne=C,Ue=W);const Be={};for(let e in ve){let l=ve[e];null==l.min&&null==l.max||(Be[e]={min:l.min,max:l.max},l.min=l.max=null)}const Ve=u.tzDate||(e=>new Date(ne(e/fe))),$e=u.fmtDate||Ze,Je=1==fe?_l(Ve):kl(Ve),qe=Ml(Ve,yl(1==fe?wl:vl,$e)),Ke=Tl(Ve,El("{YYYY}-{MM}-{DD} {h}:{mm}{aa}",$e)),Xe=[],Qe=k.legend=Le({},zl,u.legend),el=Qe.show,ll=Qe.markers;let tl,nl,sl;Qe.idxs=Xe,ll.width=me(ll.width),ll.dash=me(ll.dash),ll.stroke=me(ll.stroke),ll.fill=me(ll.fill);let rl,ul=[],al=[],fl=!1,cl={};if(Qe.live){const e=de[1]?de[1].values:null;fl=null!=e,rl=fl?e(k,1,0):{_:0};for(let e in rl)cl[e]=w}if(el)if(tl=z("table","u-legend",L),sl=z("tbody",null,tl),Qe.mount(k,tl),fl){nl=z("thead",null,tl,sl);let e=z("tr",null,nl);for(var hl in z("th",null,e),rl)z("th",l,e).textContent=hl}else S(tl,"u-inline"),Qe.live&&S(tl,"u-live");const dl={show:!0},pl={show:!1},ml=new Map;function gl(e,l,t,n=!0){const i=ml.get(l)||{},o=xt.bind[e](k,l,t,n);o&&(G(e,l,i[e]=o),ml.set(l,i))}function Sl(e,l){const t=ml.get(l)||{};for(let n in t)null!=e&&n!=e||(I(n,l,t[n]),delete t[n]);null==e&&ml.delete(l)}let Dl=0,Pl=0,Al=0,Yl=0,Cl=0,Fl=0,Hl=Cl,Rl=Fl,Gl=Al,Bl=Yl,Vl=0,$l=0,Jl=0,ql=0;k.bbox={};let et=!1,lt=!1,rt=!1,at=!1,ft=!1,ht=!1;function dt(e,l,t){(t||e!=k.width||l!=k.height)&&pt(e,l),Sn(!1),rt=!0,lt=!0,Nn()}function pt(e,l){k.width=Dl=Al=e,k.height=Pl=Yl=l,Cl=Fl=0,function(){let e=!1,l=!1,t=!1,n=!1;ge.forEach((i=>{if(i.show&&i._show){let{side:o,_size:s}=i,r=s+(null!=i.label?i.labelSize:0);r>0&&(o%2?(Al-=r,3==o?(Cl+=r,n=!0):t=!0):(Yl-=r,0==o?(Fl+=r,e=!0):l=!0))}})),zt[0]=e,zt[1]=t,zt[2]=l,zt[3]=n,Al-=At[1]+At[3],Cl+=At[3],Yl-=At[2]+At[0],Fl+=At[0]}(),function(){let e=Cl+Al,l=Fl+Yl,t=Cl,n=Fl;function i(i,o){switch(i){case 1:return e+=o,e-o;case 2:return l+=o,l-o;case 3:return t-=o,t+o;case 0:return n-=o,n+o}}ge.forEach((e=>{if(e.show&&e._show){let l=e.side;e._pos=i(l,e._size),null!=e.label&&(e._lpos=i(l,e.labelSize))}}))}();let t=k.bbox;Vl=t.left=ye(Cl*y,.5),$l=t.top=ye(Fl*y,.5),Jl=t.width=ye(Al*y,.5),ql=t.height=ye(Yl*y,.5)}const gt=3;k.setSize=function({width:e,height:l}){dt(e,l)};const xt=k.cursor=Le({},Wl,{drag:{y:2==M}},u.cursor);if(null==xt.dataIdx){let e=xt.hover,l=e.skip=new Set(e.skip??[]);l.add(void 0);let t=e.prox=me(e.prox),n=e.bias??=0;xt.dataIdx=(e,i,o,s)=>{if(0==i)return o;let r=o,u=t(e,i,o,s)??he,a=u>=0&&he>u,f=0==Ge.ori?Al:Yl,c=xt.left,h=g[0],d=g[i];if(l.has(d[o])){r=null;let e,t=null,i=null;if(0==n||-1==n)for(e=o;null==t&&e-- >0;)l.has(d[e])||(t=e);if(0==n||1==n)for(e=o;null==i&&e++<d.length;)l.has(d[e])||(i=e);if(null!=t||null!=i)if(a){let e=c-(null==t?-1/0:Ne(h[t],Ge,f,0)),l=(null==i?1/0:Ne(h[i],Ge,f,0))-c;e>l?l>u||(r=i):e>u||(r=t)}else r=null==i?t:null==t||o-t>i-o?i:t}else a&&le(c-Ne(h[o],Ge,f,0))>u&&(r=null);return r}}const wt=e=>{xt.event=e};xt.idxs=Xe,xt._lock=!1;let _t=xt.points;_t.show=me(_t.show),_t.size=me(_t.size),_t.stroke=me(_t.stroke),_t.width=me(_t.width),_t.fill=me(_t.fill);const bt=k.focus=Le({},u.focus||{alpha:.3},xt.focus),vt=bt.prox>=0,kt=vt&&_t.one;let yt=[],Mt=[],St=[];function Et(e,l){let t=_t.show(k,l);if(t)return S(t,"u-cursor-pt"),S(t,e.class),A(t,-10,-10,Al,Yl),Z.insertBefore(t,yt[l]),t}function Tt(t,n){if(1==M||n>0){let e=1==M&&ve[t.scale].time,l=t.value;t.value=e?Fe(l)?Tl(Ve,El(l,$e)):l||Ke:l||Zl,t.label=t.label||(e?"Time":"Value")}if(kt||n>0){t.width=null==t.width?1:t.width,t.paths=t.paths||Ht||we,t.fillTo=me(t.fillTo||ct),t.pxAlign=+q(t.pxAlign,te),t.pxRound=mt(t.pxAlign),t.stroke=me(t.stroke||null),t.fill=me(t.fill||null),t._stroke=t._fill=t._paths=t._focus=null;let e=function(e){return Ee(1*(3+2*(e||1)),3)}(se(1,t.width)),l=t.points=Le({},{size:e,width:se(1,.2*e),stroke:t.stroke,space:2*e,paths:Rt,_stroke:null,_fill:null},t.points);l.show=me(l.show),l.filter=me(l.filter),l.fill=me(l.fill),l.stroke=me(l.stroke),l.paths=me(l.paths),l.pxAlign=t.pxAlign}if(el){let i=function(t,n){if(0==n&&(fl||!Qe.live||2==M))return We;let i=[],o=z("tr","u-series",sl,sl.childNodes[n]);S(o,t.class),t.show||S(o,e);let s=z("th",null,o);if(ll.show){let e=D("u-marker",s);if(n>0){let l=ll.width(k,n);l&&(e.style.border=l+"px "+ll.dash(k,n)+" "+ll.stroke(k,n)),e.style.background=ll.fill(k,n)}}let r=D(l,s);for(var u in r.textContent=t.label,n>0&&(ll.show||(r.style.color=t.width>0?ll.stroke(k,n):ll.fill(k,n)),gl("click",s,(e=>{if(xt._lock)return;wt(e);let l=de.indexOf(t);if((e.ctrlKey||e.metaKey)!=Qe.isolate){let e=de.some(((e,t)=>t>0&&t!=l&&e.show));de.forEach(((t,n)=>{n>0&&Qn(n,e?n==l?dl:pl:dl,!0,Pi.setSeries)}))}else Qn(l,{show:!t.show},!0,Pi.setSeries)}),!1),vt&&gl(d,s,(e=>{xt._lock||(wt(e),Qn(de.indexOf(t),ni,!0,Pi.setSeries))}),!1)),rl){let e=z("td","u-value",o);e.textContent="--",i.push(e)}return[o,i]}(t,n);ul.splice(n,0,i[0]),al.splice(n,0,i[1]),Qe.values.push(null)}if(xt.show){Xe.splice(n,0,null);let e=null;kt?0==n&&(e=Et(t,n)):n>0&&(e=Et(t,n)),yt.splice(n,0,e),Mt.splice(n,0,0),St.splice(n,0,0)}zi("addSeries",n)}k.addSeries=function(e,l){l=null==l?de.length:l,e=1==M?It(e,l,Ol,nt):It(e,l,{},tt),de.splice(l,0,e),Tt(de[l],l)},k.delSeries=function(e){if(de.splice(e,1),el){Qe.values.splice(e,1),al.splice(e,1);let l=ul.splice(e,1)[0];Sl(null,l.firstChild),l.remove()}xt.show&&(Xe.splice(e,1),yt.splice(e,1)[0].remove(),Mt.splice(e,1),St.splice(e,1)),zi("delSeries",e)};const zt=[!1,!1,!1,!1];function Dt(e,l,t){let[n,i,o,s]=t,r=l%2,u=0;return 0==r&&(s||i)&&(u=0==l&&!n||2==l&&!o?ne(Il.size/3):0),1==r&&(n||o)&&(u=1==l&&!i||3==l&&!s?ne(Ql.size/2):0),u}const Pt=k.padding=(u.padding||[Dt,Dt,Dt,Dt]).map((e=>me(q(e,Dt)))),At=k._padding=Pt.map(((e,l)=>e(k,l,zt,0)));let Wt,Yt=null,Ft=null;const Kt=1==M?de[0].idxs:null;let Xt,Zt,Qt,en,ln,tn,nn,on,sn,rn,un=null,an=!1;function fn(e,l){if(k.data=k._data=g=null==e?[]:e,2==M){Wt=0;for(let e=1;de.length>e;e++)Wt+=g[e][0].length}else{0==g.length&&(k.data=k._data=g=[[]]),un=g[0],Wt=un.length;let e=g;if(2==Ie){e=g.slice();let l=e[0]=Array(Wt);for(let e=0;Wt>e;e++)l[e]=e}k._data=g=e}if(Sn(!0),zi("setData"),2==Ie&&(rt=!0),!1!==l){let e=Ge;e.auto(k,an)?cn():Zn(Me,e.min,e.max),at=at||xt.left>=0,ht=!0,Nn()}}function cn(){let e,l;an=!0,1==M&&(Wt>0?(Yt=Kt[0]=0,Ft=Kt[1]=Wt-1,e=g[0][Yt],l=g[0][Ft],2==Ie?(e=Yt,l=Ft):e==l&&(3==Ie?[e,l]=N(e,e,Ge.log,!1):4==Ie?[e,l]=j(e,e,Ge.log,!1):Ge.time?l=e+ne(86400/fe):[e,l]=J(e,l,U,!0))):(Yt=Kt[0]=e=null,Ft=Kt[1]=l=null)),Zn(Me,e,l)}function hn(e,l,t,n,i,o){e??=a,t??=Ae,n??="butt",i??=a,o??="round",e!=Xt&&($.strokeStyle=Xt=e),i!=Zt&&($.fillStyle=Zt=i),l!=Qt&&($.lineWidth=Qt=l),o!=ln&&($.lineJoin=ln=o),n!=tn&&($.lineCap=tn=n),t!=en&&$.setLineDash(en=t)}function dn(e,l,t,n){l!=Zt&&($.fillStyle=Zt=l),e!=nn&&($.font=nn=e),t!=on&&($.textAlign=on=t),n!=sn&&($.textBaseline=sn=n)}function pn(e,l,t,n,i=0){if(n.length>0&&e.auto(k,an)&&(null==l||null==l.min)){let l=q(Yt,0),o=q(Ft,n.length-1),s=null==t.min?3==e.distr?function(e,l,t){let n=he,i=-he;for(let o=l;t>=o;o++){let l=e[o];null!=l&&l>0&&(n>l&&(n=l),l>i&&(i=l))}return[n,i]}(n,l,o):function(e,l,t,n){let i=he,o=-he;if(1==n)i=e[l],o=e[t];else if(-1==n)i=e[t],o=e[l];else for(let n=l;t>=n;n++){let l=e[n];null!=l&&(i>l&&(i=l),l>o&&(o=l))}return[i,o]}(n,l,o,i):[t.min,t.max];e.min=oe(e.min,t.min=s[0]),e.max=se(e.max,t.max=s[1])}}k.setData=fn;const mn={min:null,max:null};function gn(e,l){let t=l?de[e].points:de[e];t._stroke=t.stroke(k,e),t._fill=t.fill(k,e)}function xn(e,l){let t=l?de[e].points:de[e],{stroke:n,fill:i,clip:o,flags:s,_stroke:r=t._stroke,_fill:u=t._fill,_width:a=t.width}=t._paths;a=Ee(a*y,3);let f=null,c=a%2/2;l&&null==u&&(u=a>0?"#fff":r);let h=1==t.pxAlign&&c>0;if(h&&$.translate(c,c),!l){let e=Vl-a/2,l=$l-a/2,t=Jl+a,n=ql+a;f=new Path2D,f.rect(e,l,t,n)}l?_n(r,a,t.dash,t.cap,u,n,i,s,o):function(e,l,t,n,i,o,s,r,u,a,f){let c=!1;0!=u&&ke.forEach(((h,d)=>{if(h.series[0]==e){let e,p=de[h.series[1]],m=g[h.series[1]],x=(p._paths||Pe).band;Ye(x)&&(x=1==h.dir?x[0]:x[1]);let w=null;p.show&&x&&function(e,l,t){for(l=q(l,0),t=q(t,e.length-1);t>=l;){if(null!=e[l])return!0;l++}return!1}(m,Yt,Ft)?(w=h.fill(k,d)||o,e=p._paths.clip):x=null,_n(l,t,n,i,w,s,r,u,a,f,e,x),c=!0}})),c||_n(l,t,n,i,o,s,r,u,a,f)}(e,r,a,t.dash,t.cap,u,n,i,s,f,o),h&&$.translate(-c,-c)}const wn=3;function _n(e,l,t,n,i,o,s,r,u,a,f,c){hn(e,l,t,n,i),(u||a||c)&&($.save(),u&&$.clip(u),a&&$.clip(a)),c?(r&wn)==wn?($.clip(c),f&&$.clip(f),vn(i,s),bn(e,o,l)):2&r?(vn(i,s),$.clip(c),bn(e,o,l)):1&r&&($.save(),$.clip(c),f&&$.clip(f),vn(i,s),$.restore(),bn(e,o,l)):(vn(i,s),bn(e,o,l)),(u||a||c)&&$.restore()}function bn(e,l,t){t>0&&(l instanceof Map?l.forEach(((e,l)=>{$.strokeStyle=Xt=l,$.stroke(e)})):null!=l&&e&&$.stroke(l))}function vn(e,l){l instanceof Map?l.forEach(((e,l)=>{$.fillStyle=Zt=l,$.fill(e)})):null!=l&&e&&$.fill(l)}function kn(e,l,t,n,i,o,s,r,u,a){let f=s%2/2;1==te&&$.translate(f,f),hn(r,s,u,a,r),$.beginPath();let c,h,d,p,m=i+(0==n||3==n?-o:o);0==t?(h=i,p=m):(c=i,d=m);for(let n=0;e.length>n;n++)null!=l[n]&&(0==t?c=d=e[n]:h=p=e[n],$.moveTo(c,h),$.lineTo(d,p));$.stroke(),1==te&&$.translate(-f,-f)}function yn(e){let l=!0;return ge.forEach(((t,n)=>{if(!t.show)return;let i=ve[t.scale];if(null==i.min)return void(t._show&&(l=!1,t._show=!1,Sn(!1)));t._show||(l=!1,t._show=!0,Sn(!1));let o=t.side,s=o%2,{min:r,max:u}=i,[a,f]=function(e,l,t,n){let i,o=ge[e];if(n>0){let s=o._space=o.space(k,e,l,t,n);i=$t(l,t,o._incrs=o.incrs(k,e,l,t,n,s),n,s)}else i=[0,0];return o._found=i}(n,r,u,0==s?Al:Yl);if(0==f)return;let c=t._splits=t.splits(k,n,r,u,a,f,2==i.distr),h=2==i.distr?c.map((e=>un[e])):c,d=2==i.distr?un[c[1]]-un[c[0]]:a,p=t._values=t.values(k,t.filter(k,h,n,f,d),n,f,d);t._rotate=2==o?t.rotate(k,p,n,f):0;let m=t._size;t._size=ie(t.size(k,p,n,e)),null!=m&&t._size!=m&&(l=!1)})),l}function Mn(e){let l=!0;return Pt.forEach(((t,n)=>{let i=t(k,n,zt,e);i!=At[n]&&(l=!1),At[n]=i})),l}function Sn(e){de.forEach(((l,t)=>{t>0&&(l._paths=null,e&&(1==M?(l.min=null,l.max=null):l.facets.forEach((e=>{e.min=null,e.max=null}))))}))}let En,Tn,zn,Dn,Pn,An,Wn,Yn,Cn,Fn,Hn,Rn,Gn=!1,In=!1,On=[];function Ln(){In=!1;for(let e=0;On.length>e;e++)zi(...On[e]);On.length=0}function Nn(){Gn||(je(jn),Gn=!0)}function jn(){if(et&&(function(){for(let e in ve){let l=ve[e];null==Be[e]&&(null==l.min||null!=Be[Me]&&l.auto(k,an))&&(Be[e]=mn)}for(let e in ve){let l=ve[e];null==Be[e]&&null!=l.from&&null!=Be[l.from]&&(Be[e]=mn)}null!=Be[Me]&&Sn(!0);let e={};for(let l in Be){let t=Be[l];if(null!=t){let n=e[l]=Oe(ve[l],Re);if(null!=t.min)Le(n,t);else if(l!=Me||2==M)if(0==Wt&&null==n.from){let e=n.range(k,null,null,l);n.min=e[0],n.max=e[1]}else n.min=he,n.max=-he}}if(Wt>0){de.forEach(((l,t)=>{if(1==M){let n=l.scale,i=Be[n];if(null==i)return;let o=e[n];if(0==t){let e=o.range(k,o.min,o.max,n);o.min=e[0],o.max=e[1],Yt=O(o.min,g[0]),Ft=O(o.max,g[0]),Ft-Yt>1&&(o.min>g[0][Yt]&&Yt++,g[0][Ft]>o.max&&Ft--),l.min=un[Yt],l.max=un[Ft]}else l.show&&l.auto&&pn(o,i,l,g[t],l.sorted);l.idxs[0]=Yt,l.idxs[1]=Ft}else if(t>0&&l.show&&l.auto){let[n,i]=l.facets,o=n.scale,s=i.scale,[r,u]=g[t],a=e[o],f=e[s];null!=a&&pn(a,Be[o],n,r,n.sorted),null!=f&&pn(f,Be[s],i,u,i.sorted),l.min=i.min,l.max=i.max}}));for(let l in e){let t=e[l],n=Be[l];if(null==t.from&&(null==n||null==n.min)){let e=t.range(k,t.min==he?null:t.min,t.max==-he?null:t.max,l);t.min=e[0],t.max=e[1]}}}for(let l in e){let t=e[l];if(null!=t.from){let n=e[t.from];if(null==n.min)t.min=t.max=null;else{let e=t.range(k,n.min,n.max,l);t.min=e[0],t.max=e[1]}}}let l={},t=!1;for(let n in e){let i=e[n],o=ve[n];if(o.min!=i.min||o.max!=i.max){o.min=i.min,o.max=i.max;let e=o.distr;o._min=3==e?ae(o.min):4==e?ce(o.min,o.asinh):100==e?o.fwd(o.min):o.min,o._max=3==e?ae(o.max):4==e?ce(o.max,o.asinh):100==e?o.fwd(o.max):o.max,l[n]=t=!0}}if(t){de.forEach(((e,t)=>{2==M?t>0&&l.y&&(e._paths=null):l[e.scale]&&(e._paths=null)}));for(let e in l)rt=!0,zi("setScale",e);xt.show&&xt.left>=0&&(at=ht=!0)}for(let e in Be)Be[e]=null}(),et=!1),rt&&(function(){let e=!1,l=0;for(;!e;){l++;let t=yn(l),n=Mn(l);e=l==gt||t&&n,e||(pt(k.width,k.height),lt=!0)}}(),rt=!1),lt){if(T(X,s,Cl),T(X,i,Fl),T(X,t,Al),T(X,n,Yl),T(Z,s,Cl),T(Z,i,Fl),T(Z,t,Al),T(Z,n,Yl),T(K,t,Dl),T(K,n,Pl),V.width=ne(Dl*y),V.height=ne(Pl*y),ge.forEach((({_el:l,_show:t,_size:n,_pos:i,side:o})=>{if(null!=l)if(t){let t=o%2==1;T(l,t?"left":"top",i-(3===o||0===o?n:0)),T(l,t?"width":"height",n),T(l,t?"top":"left",t?Fl:Cl),T(l,t?"height":"width",t?Yl:Al),E(l,e)}else S(l,e)})),Xt=Zt=Qt=ln=tn=nn=on=sn=en=null,rn=1,di(!0),Cl!=Hl||Fl!=Rl||Al!=Gl||Yl!=Bl){Sn(!1);let e=Al/Gl,l=Yl/Bl;if(xt.show&&!at&&xt.left>=0){xt.left*=e,xt.top*=l,zn&&A(zn,ne(xt.left),0,Al,Yl),Dn&&A(Dn,0,ne(xt.top),Al,Yl);for(let t=0;yt.length>t;t++){let n=yt[t];null!=n&&(Mt[t]*=e,St[t]*=l,A(n,ie(Mt[t]),ie(St[t]),Al,Yl))}}if(qn.show&&!ft&&qn.left>=0&&qn.width>0){qn.left*=e,qn.width*=e,qn.top*=l,qn.height*=l;for(let e in gi)T(Kn,e,qn[e])}Hl=Cl,Rl=Fl,Gl=Al,Bl=Yl}zi("setSize"),lt=!1}Dl>0&&Pl>0&&($.clearRect(0,0,V.width,V.height),zi("drawClear"),De.forEach((e=>e())),zi("draw")),qn.show&&ft&&(Xn(qn),ft=!1),xt.show&&at&&(ci(null,!0,!1),at=!1),Qe.show&&Qe.live&&ht&&(ai(),ht=!1),R||(R=!0,k.status=1,zi("ready")),an=!1,Gn=!1}function Un(e,l){let t=ve[e];if(null==t.from){if(0==Wt){let n=t.range(k,l.min,l.max,e);l.min=n[0],l.max=n[1]}if(l.min>l.max){let e=l.min;l.min=l.max,l.max=e}if(Wt>1&&null!=l.min&&null!=l.max&&1e-16>l.max-l.min)return;e==Me&&2==t.distr&&Wt>0&&(l.min=O(l.min,g[0]),l.max=O(l.max,g[0]),l.min==l.max&&l.max++),Be[e]=l,et=!0,Nn()}}k.batch=function(e,l=!1){Gn=!0,In=l,e(k),jn(),l&&On.length>0&&queueMicrotask(Ln)},k.redraw=(e,l)=>{rt=l||!1,!1!==e?Zn(Me,Ge.min,Ge.max):Nn()},k.setScale=Un;let Bn=!1;const Vn=xt.drag;let $n=Vn.x,Jn=Vn.y;xt.show&&(xt.x&&(En=D("u-cursor-x",Z)),xt.y&&(Tn=D("u-cursor-y",Z)),0==Ge.ori?(zn=En,Dn=Tn):(zn=Tn,Dn=En),Hn=xt.left,Rn=xt.top);const qn=k.select=Le({show:!0,over:!0,left:0,width:0,top:0,height:0},u.select),Kn=qn.show?D("u-select",qn.over?Z:X):null;function Xn(e,l){if(qn.show){for(let l in e)qn[l]=e[l],l in gi&&T(Kn,l,e[l]);!1!==l&&zi("setSelect")}}function Zn(e,l,t){Un(e,{min:l,max:t})}function Qn(l,t,n,i){null!=t.focus&&function(e){if(e!=ti){let l=null==e,t=1!=bt.alpha;de.forEach(((n,i)=>{if(1==M||i>0){let o=l||0==i||i==e;n._focus=l?null:o,t&&function(e,l){de[e].alpha=l,xt.show&&yt[e]&&(yt[e].style.opacity=l),el&&ul[e]&&(ul[e].style.opacity=l)}(i,o?1:bt.alpha)}})),ti=e,t&&Nn()}}(l),null!=t.show&&de.forEach(((n,i)=>{0>=i||l!=i&&null!=l||(n.show=t.show,function(l){let t=el?ul[l]:null;de[l].show?t&&E(t,e):(t&&S(t,e),A(kt?yt[0]:yt[l],-10,-10,Al,Yl))}(i),2==M?(Zn(n.facets[0].scale,null,null),Zn(n.facets[1].scale,null,null)):Zn(n.scale,null,null),Nn())})),!1!==n&&zi("setSeries",l,t),i&&Yi("setSeries",k,l,t)}let ei,li,ti;k.setSelect=Xn,k.setSeries=Qn,k.addBand=function(e,l){e.fill=me(e.fill||null),e.dir=q(e.dir,-1),ke.splice(l=null==l?ke.length:l,0,e)},k.setBand=function(e,l){Le(ke[e],l)},k.delBand=function(e){null==e?ke.length=0:ke.splice(e,1)};const ni={focus:!0};function ii(e,l,t){let n=ve[l];t&&(e=e/y-(1==n.ori?Fl:Cl));let i=Al;1==n.ori&&(i=Yl,e=i-e),-1==n.dir&&(e=i-e);let o=n._min,s=o+e/i*(n._max-o),r=n.distr;return 3==r?re(10,s):4==r?((e,l=1)=>Q.sinh(e)*l)(s,n.asinh):100==r?n.bwd(s):s}function oi(e,l){T(Kn,s,qn.left=e),T(Kn,t,qn.width=l)}function si(e,l){T(Kn,i,qn.top=e),T(Kn,n,qn.height=l)}el&&vt&&gl(p,tl,(e=>{xt._lock||(wt(e),null!=ti&&Qn(null,ni,!0,Pi.setSeries))})),k.valToIdx=e=>O(e,g[0]),k.posToIdx=function(e,l){return O(ii(e,Me,l),g[0],Yt,Ft)},k.posToVal=ii,k.valToPos=(e,l,t)=>0==ve[l].ori?W(e,ve[l],t?Jl:Al,t?Vl:0):C(e,ve[l],t?ql:Yl,t?$l:0),k.setCursor=(e,l,t)=>{Hn=e.left,Rn=e.top,ci(null,l,t)};let ri=0==Ge.ori?oi:si,ui=1==Ge.ori?oi:si;function ai(e,l){if(null!=e&&(e.idxs?e.idxs.forEach(((e,l)=>{Xe[l]=e})):(e=>void 0===e)(e.idx)||Xe.fill(e.idx),Qe.idx=Xe[0]),el&&Qe.live){for(let e=0;de.length>e;e++)(e>0||1==M&&!fl)&&fi(e,Xe[e]);!function(){if(el&&Qe.live)for(let e=2==M?1:0;de.length>e;e++){if(0==e&&fl)continue;let l=Qe.values[e],t=0;for(let n in l)al[e][t++].firstChild.nodeValue=l[n]}}()}ht=!1,!1!==l&&zi("setLegend")}function fi(e,l){let t,n=de[e],i=0==e&&2==Ie?un:g[e];fl?t=n.values(k,e,l)??cl:(t=n.value(k,null==l?null:i[l],e,l),t=null==t?cl:{_:t}),Qe.values[e]=t}function ci(e,l,t){let n;Cn=Hn,Fn=Rn,[Hn,Rn]=xt.move(k,Hn,Rn),xt.left=Hn,xt.top=Rn,xt.show&&(zn&&A(zn,ne(Hn),0,Al,Yl),Dn&&A(Dn,0,ne(Rn),Al,Yl)),ei=he,li=null;let i=0==Ge.ori?Al:Yl,o=1==Ge.ori?Al:Yl;if(0>Hn||0==Wt||Yt>Ft){n=xt.idx=null;for(let e=0;de.length>e;e++){let l=yt[e];null!=l&&A(l,-10,-10,Al,Yl)}vt&&Qn(null,ni,!0,null==e&&Pi.setSeries),Qe.live&&(Xe.fill(n),ht=!0)}else{let e,l,t;1==M&&(e=0==Ge.ori?Hn:Rn,l=ii(e,Me),n=xt.idx=O(l,g[0],Yt,Ft),t=Ne(g[0][n],Ge,i,0));let s=-10,r=-10,u=0,a=0,f=!0,c="",h="";for(let e=2==M?1:0;de.length>e;e++){let d=de[e],p=Xe[e],m=null==p?null:1==M?g[e][p]:g[e][1][p],x=xt.dataIdx(k,e,n,l),w=null==x?null:1==M?g[e][x]:g[e][1][x];ht=ht||w!=m||x!=p,Xe[e]=x;let _=x==n?t:Ne(1==M?g[0][x]:g[e][0][x],Ge,i,0);if(e>0&&d.show){let l=null==w?-10:Ue(w,1==M?ve[d.scale]:ve[d.facets[1].scale],o,0);if(vt&&null!=w){let t=1==Ge.ori?Hn:Rn,n=le(bt.dist(k,e,x,l,t));if(ei>n){let l=bt.bias;if(0!=l){let i=ii(t,d.scale),o=0>i?-1:1;o!=(0>w?-1:1)||(1==o?1==l?i>w:w>i:1==l?w>i:i>w)||(ei=n,li=e)}else ei=n,li=e}}if(ht||kt){let t,n;0==Ge.ori?(t=_,n=l):(t=l,n=_);let i,o,d,p,m,g,x=!0,w=_t.bbox;if(null!=w){x=!1;let l=w(k,e);d=l.left,p=l.top,i=l.width,o=l.height}else d=t,p=n,i=o=_t.size(k,e);if(g=_t.fill(k,e),m=_t.stroke(k,e),kt)e!=li||ei>bt.prox||(s=d,r=p,u=i,a=o,f=x,c=g,h=m);else{let l=yt[e];null!=l&&(Mt[e]=d,St[e]=p,F(l,i,o,x),Y(l,g,m),A(l,ie(d),ie(p),Al,Yl))}}}}if(kt){let e=bt.prox;if(ht||(null==ti?e>=ei:ei>e||li!=ti)){let e=yt[0];Mt[0]=s,St[0]=r,F(e,u,a,f),Y(e,c,h),A(e,ie(s),ie(r),Al,Yl)}}}if(qn.show&&Bn)if(null!=e){let[l,t]=Pi.scales,[n,s]=Pi.match,[r,u]=e.cursor.sync.scales,a=e.cursor.drag;if($n=a._x,Jn=a._y,$n||Jn){let a,f,c,h,d,{left:p,top:m,width:g,height:x}=e.select,w=e.scales[r].ori,_=e.posToVal,b=null!=l&&n(l,r),v=null!=t&&s(t,u);b&&$n?(0==w?(a=p,f=g):(a=m,f=x),c=ve[l],h=Ne(_(a,r),c,i,0),d=Ne(_(a+f,r),c,i,0),ri(oe(h,d),le(d-h))):ri(0,i),v&&Jn?(1==w?(a=p,f=g):(a=m,f=x),c=ve[t],h=Ue(_(a,u),c,o,0),d=Ue(_(a+f,u),c,o,0),ui(oe(h,d),le(d-h))):ui(0,o)}else xi()}else{let e=le(Cn-Pn),l=le(Fn-An);if(1==Ge.ori){let t=e;e=l,l=t}$n=Vn.x&&e>=Vn.dist,Jn=Vn.y&&l>=Vn.dist;let t,n,s=Vn.uni;null!=s?$n&&Jn&&($n=e>=s,Jn=l>=s,$n||Jn||(l>e?Jn=!0:$n=!0)):Vn.x&&Vn.y&&($n||Jn)&&($n=Jn=!0),$n&&(0==Ge.ori?(t=Wn,n=Hn):(t=Yn,n=Rn),ri(oe(t,n),le(n-t)),Jn||ui(0,o)),Jn&&(1==Ge.ori?(t=Wn,n=Hn):(t=Yn,n=Rn),ui(oe(t,n),le(n-t)),$n||ri(0,i)),$n||Jn||(ri(0,0),ui(0,0))}if(Vn._x=$n,Vn._y=Jn,null==e){if(t){if(null!=Ai){let[e,l]=Pi.scales;Pi.values[0]=null!=e?ii(0==Ge.ori?Hn:Rn,e):null,Pi.values[1]=null!=l?ii(1==Ge.ori?Hn:Rn,l):null}Yi(f,k,Hn,Rn,Al,Yl,n)}if(vt){let e=t&&Pi.setSeries,l=bt.prox;null==ti?ei>l||Qn(li,ni,!0,e):ei>l?Qn(null,ni,!0,e):li!=ti&&Qn(li,ni,!0,e)}}ht&&(Qe.idx=n,ai()),!1!==l&&zi("setCursor")}k.setLegend=ai;let hi=null;function di(e=!1){e?hi=null:(hi=Z.getBoundingClientRect(),zi("syncRect",hi))}function pi(e,l,t,n,i,o){xt._lock||Bn&&null!=e&&0==e.movementX&&0==e.movementY||(mi(e,l,t,n,i,o,0,!1,null!=e),null!=e?ci(null,!0,!0):ci(l,!0,!1))}function mi(e,l,t,n,i,o,s,r,u){if(null==hi&&di(!1),wt(e),null!=e)t=e.clientX-hi.left,n=e.clientY-hi.top;else{if(0>t||0>n)return Hn=-10,void(Rn=-10);let[e,s]=Pi.scales,r=l.cursor.sync,[u,a]=r.values,[f,c]=r.scales,[h,d]=Pi.match,p=l.axes[0].side%2==1,m=0==Ge.ori?Al:Yl,g=1==Ge.ori?Al:Yl,x=p?o:i,w=p?i:o,_=p?n:t,b=p?t:n;if(t=null!=f?h(e,f)?H(u,ve[e],m,0):-10:m*(_/x),n=null!=c?d(s,c)?H(a,ve[s],g,0):-10:g*(b/w),1==Ge.ori){let e=t;t=n,n=e}}u&&(t>1&&Al-1>t||(t=ye(t,Al)),n>1&&Yl-1>n||(n=ye(n,Yl))),r?(Pn=t,An=n,[Wn,Yn]=xt.move(k,t,n)):(Hn=t,Rn=n)}Object.defineProperty(k,"rect",{get:()=>(null==hi&&di(!1),hi)});const gi={width:0,height:0,left:0,top:0};function xi(){Xn(gi,!1)}let wi,_i,bi,vi;function ki(e,l,t,n,i,o){Bn=!0,$n=Jn=Vn._x=Vn._y=!1,mi(e,l,t,n,i,o,0,!0,!1),null!=e&&(gl(h,b,yi,!1),Yi(c,k,Wn,Yn,Al,Yl,null));let{left:s,top:r,width:u,height:a}=qn;wi=s,_i=r,bi=u,vi=a,xi()}function yi(e,l,t,n,i,o){Bn=Vn._x=Vn._y=!1,mi(e,l,t,n,i,o,0,!1,!0);let{left:s,top:r,width:u,height:a}=qn,f=u>0||a>0,c=wi!=s||_i!=r||bi!=u||vi!=a;if(f&&c&&Xn(qn),Vn.setScale&&f&&c){let e=s,l=u,t=r,n=a;if(1==Ge.ori&&(e=r,l=a,t=s,n=u),$n&&Zn(Me,ii(e,Me),ii(e+l,Me)),Jn)for(let e in ve){let l=ve[e];e!=Me&&null==l.from&&l.min!=he&&Zn(e,ii(t+n,e),ii(t,e))}xi()}else xt.lock&&(xt._lock=!xt._lock,ci(null,!0,!1));null!=e&&(Sl(h,b),Yi(h,k,Hn,Rn,Al,Yl,null))}function Mi(e){xt._lock||(wt(e),cn(),xi(),null!=e&&Yi(m,k,Hn,Rn,Al,Yl,null))}function Si(){ge.forEach(qt),dt(k.width,k.height,!0)}G(x,v,Si);const Ei={};Ei.mousedown=ki,Ei.mousemove=pi,Ei.mouseup=yi,Ei.dblclick=Mi,Ei.setSeries=(e,l,t,n)=>{-1!=(t=(0,Pi.match[2])(k,l,t))&&Qn(t,n,!0,!1)},xt.show&&(gl(c,Z,ki),gl(f,Z,pi),gl(d,Z,(e=>{wt(e),di(!1)})),gl(p,Z,(function(e){if(xt._lock)return;wt(e);let l=Bn;if(Bn){let e,l,t=!0,n=!0,i=10;0==Ge.ori?(e=$n,l=Jn):(e=Jn,l=$n),e&&l&&(t=i>=Hn||Hn>=Al-i,n=i>=Rn||Rn>=Yl-i),e&&t&&(Hn=Wn>Hn?0:Al),l&&n&&(Rn=Yn>Rn?0:Yl),ci(null,!0,!0),Bn=!1}Hn=-10,Rn=-10,ci(null,!0,!0),l&&(Bn=l)})),gl(m,Z,Mi),Ct.add(k),k.syncRect=di);const Ti=k.hooks=u.hooks||{};function zi(e,l,t){In?On.push([e,l,t]):e in Ti&&Ti[e].forEach((e=>{e.call(null,k,l,t)}))}(u.plugins||[]).forEach((e=>{for(let l in e.hooks)Ti[l]=(Ti[l]||[]).concat(e.hooks[l])}));const Di=(e,l,t)=>t,Pi=Le({key:null,setSeries:!1,filters:{pub:_e,sub:_e},scales:[Me,de[1]?de[1].scale:null],match:[be,be,Di],values:[null,null]},xt.sync);2==Pi.match.length&&Pi.match.push(Di),xt.sync=Pi;const Ai=Pi.key,Wi=ut(Ai);function Yi(e,l,t,n,i,o,s){Pi.filters.pub(e,l,t,n,i,o,s)&&Wi.pub(e,l,t,n,i,o,s)}function Ci(){zi("init",u,g),fn(g||u.data,!1),Be[Me]?Un(Me,Be[Me]):cn(),ft=qn.show&&(qn.width>0||qn.height>0),at=ht=!0,dt(u.width,u.height)}return Wi.sub(k),k.pub=function(e,l,t,n,i,o,s){Pi.filters.sub(e,l,t,n,i,o,s)&&Ei[e](null,l,t,n,i,o,s)},k.destroy=function(){Wi.unsub(k),Ct.delete(k),ml.clear(),I(x,v,Si),L.remove(),tl?.remove(),zi("destroy")},de.forEach(Tt),ge.forEach((function(e,l){if(e._show=e.show,e.show){let t=ve[e.scale];null==t&&(e.scale=e.side%2?de[1].scale:Me,t=ve[e.scale]);let n=t.time;e.size=me(e.size),e.space=me(e.space),e.rotate=me(e.rotate),Ye(e.incrs)&&e.incrs.forEach((e=>{!Te.has(e)&&Te.set(e,ze(e))})),e.incrs=me(e.incrs||(2==t.distr?il:n?1==fe?xl:bl:ol)),e.splits=me(e.splits||(n&&1==t.distr?Je:3==t.distr?jl:4==t.distr?Ul:Nl)),e.stroke=me(e.stroke),e.grid.stroke=me(e.grid.stroke),e.ticks.stroke=me(e.ticks.stroke),e.border.stroke=me(e.border.stroke);let i=e.values;e.values=Ye(i)&&!Ye(i[0])?me(i):n?Ye(i)?Ml(Ve,yl(i,$e)):Fe(i)?function(e,l){let t=Ze(l);return(l,n)=>n.map((l=>t(e(l))))}(Ve,i):i||qe:i||Ll,e.filter=me(e.filter||(3>t.distr||10!=t.log?3==t.distr&&2==t.log?Xl:xe:Kl)),e.font=Jt(e.font),e.labelFont=Jt(e.labelFont),e._size=e.size(k,null,l,0),e._space=e._rotate=e._incrs=e._found=e._splits=e._values=null,e._size>0&&(zt[l]=!0,e._el=D("u-axis",K))}})),_?_ instanceof HTMLElement?(_.appendChild(L),Ci()):_(k,Ci):Ci(),k}Kt.assign=Le,Kt.fmtNum=Z,Kt.rangeNum=J,Kt.rangeLog=N,Kt.rangeAsinh=j,Kt.orient=at,Kt.pxRatio=y,Kt.join=function(e,l){if(function(e){let l=e[0][0],t=l.length;for(let n=1;e.length>n;n++){let i=e[n][0];if(i.length!=t)return!1;if(i!=l)for(let e=0;t>e;e++)if(i[e]!=l[e])return!1}return!0}(e)){let l=e[0].slice();for(let t=1;e.length>t;t++)l.push(...e[t].slice(1));return function(e,l=100){const t=e.length;if(1>=t)return!0;let n=0,i=t-1;for(;i>=n&&null==e[n];)n++;for(;i>=n&&null==e[i];)i--;if(n>=i)return!0;const o=se(1,te((i-n+1)/l));for(let l=e[n],t=n+o;i>=t;t+=o){const n=e[t];if(null!=n){if(l>=n)return!1;l=n}}return!0}(l[0])||(l=function(e){let l=e[0],t=l.length,n=Array(t);for(let e=0;n.length>e;e++)n[e]=e;n.sort(((e,t)=>l[e]-l[t]));let i=[];for(let l=0;e.length>l;l++){let o=e[l],s=Array(t);for(let e=0;t>e;e++)s[e]=o[n[e]];i.push(s)}return i}(l)),l}let t=new Set;for(let l=0;e.length>l;l++){let n=e[l][0],i=n.length;for(let e=0;i>e;e++)t.add(n[e])}let n=[Array.from(t).sort(((e,l)=>e-l))],i=n[0].length,o=new Map;for(let e=0;i>e;e++)o.set(n[0][e],e);for(let t=0;e.length>t;t++){let s=e[t],r=s[0];for(let e=1;s.length>e;e++){let u=s[e],a=Array(i).fill(void 0),f=l?l[t][e]:1,c=[];for(let e=0;u.length>e;e++){let l=u[e],t=o.get(r[e]);null===l?0!=f&&(a[t]=l,2==f&&c.push(t)):a[t]=l}Ne(a,c,i),n.push(a)}}return n},Kt.fmtDate=Ze,Kt.tzDate=function(e,l){let t;return"UTC"==l||"Etc/UTC"==l?t=new Date(+e+6e4*e.getTimezoneOffset()):l==Qe?t=e:(t=new Date(e.toLocaleString("en-US",{timeZone:l})),t.setMilliseconds(e.getMilliseconds())),t},Kt.sync=ut;{Kt.addGap=function(e,l,t){let n=e[e.length-1];n&&n[0]==l?n[1]=t:e.push([l,t])},Kt.clipGaps=dt;let e=Kt.paths={points:Tt};e.linear=At,e.stepped=function(e){const l=q(e.align,1),t=q(e.ascDesc,!1),n=q(e.alignGaps,0),i=q(e.extend,!1);return(e,o,s,r)=>at(e,o,((u,a,f,c,h,d,p,m,g,x,w)=>{let _=u.pxRound,{left:b,width:v}=e.bbox,k=e=>_(d(e,c,x,m)),M=e=>_(p(e,h,w,g)),S=0==c.ori?_t:bt;const E={stroke:new Path2D,fill:null,clip:null,band:null,gaps:null,flags:1},T=E.stroke,z=c.dir*(0==c.ori?1:-1);s=L(f,s,r,1),r=L(f,s,r,-1);let D=M(f[1==z?s:r]),P=k(a[1==z?s:r]),A=P,W=P;i&&-1==l&&(W=b,S(T,W,D)),S(T,P,D);for(let e=1==z?s:r;e>=s&&r>=e;e+=z){let t=f[e];if(null==t)continue;let n=k(a[e]),i=M(t);1==l?S(T,n,D):S(T,A,i),S(T,n,i),D=i,A=n}let Y=A;i&&1==l&&(Y=b+v,S(T,Y,D));let[C,F]=ft(e,o);if(null!=u.fill||0!=C){let l=E.fill=new Path2D(T),t=M(u.fillTo(e,o,u.min,u.max,C));S(l,Y,t),S(l,W,t)}if(!u.spanGaps){let i=[];i.push(...pt(a,f,s,r,z,k,n));let h=u.width*y/2,d=t||1==l?h:-h,p=t||-1==l?-h:h;i.forEach((e=>{e[0]+=d,e[1]+=p})),E.gaps=i=u.gaps(e,o,s,r,i),E.clip=dt(i,c.ori,m,g,x,w)}return 0!=F&&(E.band=2==F?[ht(e,o,s,r,T,-1),ht(e,o,s,r,T,1)]:ht(e,o,s,r,T,F)),E}))},e.bars=function(e){const l=q((e=e||Pe).size,[.6,he,1]),t=e.align||0,n=e.gap||0;let i=e.radius;i=null==i?[0,0]:"number"==typeof i?[i,0]:i;const o=me(i),s=1-l[0],r=q(l[1],he),u=q(l[2],1),a=q(e.disp,Pe),f=q(e.each,(()=>{})),{fill:c,stroke:h}=a;return(e,l,i,d)=>at(e,l,((p,m,g,x,w,_,b,v,k,M,S)=>{let E,T,z=p.pxRound,D=t,P=n*y,A=r*y,W=u*y;0==x.ori?[E,T]=o(e,l):[T,E]=o(e,l);const Y=x.dir*(0==x.ori?1:-1);let C,F,H,R=0==x.ori?vt:kt,G=0==x.ori?f:(e,l,t,n,i,o,s)=>{f(e,l,t,i,n,s,o)},I=q(e.bands,Ae).find((e=>e.series[0]==l)),O=p.fillTo(e,l,p.min,p.max,null!=I?I.dir:0),L=z(b(O,w,S,k)),N=M,j=z(p.width*y),U=!1,B=null,V=null,$=null,J=null;null==c||0!=j&&null==h||(U=!0,B=c.values(e,l,i,d),V=new Map,new Set(B).forEach((e=>{null!=e&&V.set(e,new Path2D)})),j>0&&($=h.values(e,l,i,d),J=new Map,new Set($).forEach((e=>{null!=e&&J.set(e,new Path2D)}))));let{x0:K,size:X}=a;if(null!=K&&null!=X){D=1,m=K.values(e,l,i,d),2==K.unit&&(m=m.map((l=>e.posToVal(v+l*M,x.key,!0))));let t=X.values(e,l,i,d);F=2==X.unit?t[0]*M:_(t[0],x,M,v)-_(0,x,M,v),N=Wt(m,g,_,x,M,v,N),H=N-F+P}else N=Wt(m,g,_,x,M,v,N),H=N*s+P,F=N-H;1>H&&(H=0),F/2>j||(j=0),5>H&&(z=ge);let Z=H>0;F=z(pe(N-H-(Z?j:0),W,A)),C=(0==D?F/2:D==Y?0:F)-D*Y*((0==D?P/2:0)+(Z?j/2:0));const Q={stroke:null,fill:null,clip:null,band:null,gaps:null,flags:0},ee=U?null:new Path2D;let le=null;if(null!=I)le=e.data[I.series[1]];else{let{y0:t,y1:n}=a;null!=t&&null!=n&&(g=n.values(e,l,i,d),le=t.values(e,l,i,d))}let ne=E*F,ie=T*F;for(let t=1==Y?i:d;t>=i&&d>=t;t+=Y){let n=g[t];if(null==n)continue;if(null!=le){let e=le[t]??0;if(n-e==0)continue;L=b(e,w,S,k)}let i=_(2!=x.distr||null!=a?m[t]:t,x,M,v),o=b(q(n,O),w,S,k),s=z(i-C),r=z(se(o,L)),u=z(oe(o,L)),f=r-u;if(null!=n){let i=0>n?ie:ne,o=0>n?ne:ie;U?(j>0&&null!=$[t]&&R(J.get($[t]),s,u+te(j/2),F,se(0,f-j),i,o),null!=B[t]&&R(V.get(B[t]),s,u+te(j/2),F,se(0,f-j),i,o)):R(ee,s,u+te(j/2),F,se(0,f-j),i,o),G(e,l,t,s-j/2,u,F+j,f)}}return j>0?Q.stroke=U?J:ee:U||(Q._fill=0==p.width?p._fill:p._stroke??p._fill,Q.width=0),Q.fill=U?V:ee,Q}))},e.spline=function(e){return function(e,l){const t=q(l?.alignGaps,0);return(l,n,i,o)=>at(l,n,((s,r,u,a,f,c,h,d,p,m,g)=>{let x,w,_,b=s.pxRound,v=e=>b(c(e,a,m,d)),k=e=>b(h(e,f,g,p));0==a.ori?(x=xt,_=_t,w=St):(x=wt,_=bt,w=Et);const y=a.dir*(0==a.ori?1:-1);i=L(u,i,o,1),o=L(u,i,o,-1);let M=v(r[1==y?i:o]),S=M,E=[],T=[];for(let e=1==y?i:o;e>=i&&o>=e;e+=y)if(null!=u[e]){let l=v(r[e]);E.push(S=l),T.push(k(u[e]))}const z={stroke:e(E,T,x,_,w,b),fill:null,clip:null,band:null,gaps:null,flags:1},D=z.stroke;let[P,A]=ft(l,n);if(null!=s.fill||0!=P){let e=z.fill=new Path2D(D),t=k(s.fillTo(l,n,s.min,s.max,P));_(e,S,t),_(e,M,t)}if(!s.spanGaps){let e=[];e.push(...pt(r,u,i,o,y,v,t)),z.gaps=e=s.gaps(l,n,i,o,e),z.clip=dt(e,a.ori,d,p,m,g)}return 0!=A&&(z.band=2==A?[ht(l,n,i,o,D,-1),ht(l,n,i,o,D,1)]:ht(l,n,i,o,D,A)),z}))}(Yt,e)}}return Kt}();
+</script>
+<script>/* RocketLog core: parsing, column detection and flight analysis.
+   Pure functions, no DOM. Works in browser and in node (via vm). */
+var RL = (function () {
+  'use strict';
+  var G = 9.80665;
+
+  /* ------------------------------------------------------------------ */
+  /* CSV parsing                                                         */
+  /* ------------------------------------------------------------------ */
+  function detectDelimiter(line) {
+    var c = { ',': 0, ';': 0, '\t': 0, '|': 0 };
+    for (var i = 0; i < line.length; i++) if (c[line[i]] !== undefined) c[line[i]]++;
+    var best = ',', n = 0;
+    for (var k in c) if (c[k] > n) { n = c[k]; best = k; }
+    return best;
+  }
+  function splitLine(line, d) {
+    if (line.indexOf('"') < 0) return line.split(d);
+    var out = [], cur = '', q = false;
+    for (var i = 0; i < line.length; i++) {
+      var ch = line[i];
+      if (ch === '"') { if (q && line[i + 1] === '"') { cur += '"'; i++; } else q = !q; }
+      else if (ch === d && !q) { out.push(cur); cur = ''; }
+      else cur += ch;
+    }
+    out.push(cur);
+    return out;
+  }
+  function isNumLike(s) { return s !== '' && !isNaN(+s); }
+
+  function parseCSV(text) {
+    if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+    var lines = text.split(/\r?\n/);
+    // skip comment / blank / preamble lines: header is first line whose next line has same field count & numeric content
+    var start = 0;
+    while (start < lines.length && (lines[start].trim() === '' || /^\s*(#|\/\/)/.test(lines[start]))) start++;
+    var d = detectDelimiter(lines[start] || '');
+    var first = splitLine(lines[start], d).map(function (s) { return s.trim(); });
+    var hasHeader = first.some(function (s) { return s !== '' && !isNumLike(s); });
+    var names, dataStart;
+    if (hasHeader) { names = first; dataStart = start + 1; }
+    else { names = first.map(function (_, i) { return 'col' + (i + 1); }); dataStart = start; }
+    names = names.map(function (n, i) { return n.replace(/^"|"$/g, '') || ('col' + (i + 1)); });
+    // dedupe
+    var seen = {};
+    names = names.map(function (n) { if (seen[n]) { seen[n]++; return n + '_' + seen[n]; } seen[n] = 1; return n; });
+    var nc = names.length, nrows = 0;
+    var cap = lines.length - dataStart;
+    var num = names.map(function () { return new Float64Array(cap); });
+    var str = names.map(function () { return null; });
+    for (var li = dataStart; li < lines.length; li++) {
+      var L = lines[li];
+      if (!L || L.trim() === '' || L[0] === '#') continue;
+      var f = splitLine(L, d);
+      if (f.length < nc * 0.5) continue;
+      for (var j = 0; j < nc; j++) {
+        var s = f[j];
+        if (s === undefined) { num[j][nrows] = NaN; continue; }
+        s = s.trim();
+        var v = s === '' ? NaN : +s;
+        if (v !== v && s !== '' && s.toLowerCase() !== 'nan') {
+          if (!str[j]) str[j] = new Array(cap);
+          str[j][nrows] = s.replace(/^"|"$/g, '');
+        }
+        num[j][nrows] = v;
+      }
+      nrows++;
+    }
+    var cols = names.map(function (n, j) {
+      var arr = num[j].subarray(0, nrows);
+      var col = { name: n, data: arr };
+      if (str[j]) {
+        var nn = 0; for (var i = 0; i < nrows; i++) if (arr[i] === arr[i]) nn++;
+        var ns = 0; for (i = 0; i < nrows; i++) if (str[j][i] !== undefined) ns++;
+        if (ns > nn) { // text column
+          var s2 = new Array(nrows);
+          for (i = 0; i < nrows; i++) s2[i] = str[j][i] !== undefined ? str[j][i] : (arr[i] === arr[i] ? String(arr[i]) : '');
+          col.text = s2; col.data = null;
+        }
+      }
+      return col;
+    });
+    return { columns: cols, rows: nrows };
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* CATS Vega / CATS flight computer binary log (.cfl)                  */
+  /* ------------------------------------------------------------------ */
+  var CATS_STATES = { 0: 'Invalid', 1: 'Calibrating', 2: 'Ready', 3: 'Thrusting', 4: 'Coasting', 5: 'Drogue', 6: 'Main', 7: 'Touchdown' };
+  var CATS_EVENTS = { 0: 'Moving', 1: 'Ready', 2: 'Liftoff', 3: 'Max V / burnout', 4: 'Apogee', 5: 'Main deployment', 6: 'Touchdown', 7: 'Custom 1', 8: 'Custom 2' };
+  var CATS_ACTIONS = { 0: 'none', 1: 'delay', 2: 'pyro 1', 3: 'pyro 2', 4: 'pyro 3', 5: 'low-current 1', 6: 'low-current 2', 7: 'low-current 3', 8: 'servo 1', 9: 'servo 2' };
+  var CATS_SZ = { 0x10: 12, 0x20: 8, 0x40: 12, 0x80: 8, 0x100: 8, 0x200: 4, 0x400: 8, 0x800: 4, 0x1000: 12, 0x2000: 2 };
+
+  function looksLikeCATS(buf) {
+    var u = new Uint8Array(buf, 0, Math.min(64, buf.byteLength));
+    var z = -1;
+    for (var i = 0; i < Math.min(16, u.length); i++) if (u[i] === 0) { z = i; break; }
+    if (z < 3) return false;
+    var s = String.fromCharCode.apply(null, Array.prototype.slice.call(u, 0, z));
+    if (!/^\d+\.\d+\.\d+/.test(s)) return false;
+    if (buf.byteLength < z + 9) return false;
+    var dv = new DataView(buf);
+    var typ = dv.getUint32(z + 5, true) & ~0xF;
+    return CATS_SZ[typ] !== undefined;
+  }
+
+  function parseCATS(buf) {
+    var dv = new DataView(buf), u = new Uint8Array(buf), n = buf.byteLength;
+    var z = 0; while (z < n && u[z] !== 0) z++;
+    var version = String.fromCharCode.apply(null, Array.prototype.slice.call(u, 0, z));
+    var i = z + 1, last = null, skipped = 0;
+    var rec = {}; // key -> {t:[], vals:[[]...]}
+    function push(key, t, vals) {
+      var r = rec[key]; if (!r) { r = rec[key] = { t: [], v: vals.map(function () { return []; }) }; }
+      r.t.push(t); for (var k = 0; k < vals.length; k++) r.v[k].push(vals[k]);
+    }
+    var events = [];
+    while (i + 8 <= n) {
+      var ts = dv.getUint32(i, true), typ = dv.getUint32(i + 4, true), base = typ & ~0xF, id = typ & 0xF;
+      var sz = CATS_SZ[base];
+      if (sz === undefined || id > 3 || i + 8 + sz > n || (last !== null && (ts - last < -5000 || ts - last > 60000))) { i++; skipped++; continue; }
+      var p = i + 8; last = ts;
+      switch (base) {
+        case 0x10: push('imu' + id, ts, [dv.getInt16(p, true), dv.getInt16(p + 2, true), dv.getInt16(p + 4, true), dv.getInt16(p + 6, true), dv.getInt16(p + 8, true), dv.getInt16(p + 10, true)]); break;
+        case 0x20: push('baro' + id, ts, [dv.getInt32(p, true), dv.getInt32(p + 4, true)]); break;
+        case 0x40: push('fi', ts, [dv.getFloat32(p, true), dv.getFloat32(p + 4, true), dv.getFloat32(p + 8, true)]); break;
+        case 0x80: push('ori', ts, [dv.getInt16(p, true), dv.getInt16(p + 2, true), dv.getInt16(p + 4, true), dv.getInt16(p + 6, true)]); break;
+        case 0x100: push('filt', ts, [dv.getFloat32(p, true), dv.getFloat32(p + 4, true)]); break;
+        case 0x200: events.push({ ts: ts, kind: 'state', code: dv.getUint32(p, true) }); break;
+        case 0x400: events.push({ ts: ts, kind: 'event', code: dv.getUint32(p, true), action: dv.getUint16(p + 4, true), arg: dv.getUint16(p + 6, true) }); break;
+        case 0x800: events.push({ ts: ts, kind: 'error', code: dv.getUint32(p, true) }); break;
+        case 0x1000: push('gnss', ts, [dv.getFloat32(p, true), dv.getFloat32(p + 4, true), dv.getUint8(p + 8)]); break;
+        case 0x2000: push('volt', ts, [dv.getUint16(p, true)]); break;
+      }
+      i = p + sz;
+    }
+    // Build a single table on the flight-info timeline, other streams interpolated (nearest) onto it
+    var baseKey = rec.fi ? 'fi' : Object.keys(rec)[0];
+    var T = rec[baseKey].t, N = T.length;
+    var cols = [{ name: 'time_ms', data: Float64Array.from(T) }];
+    function addStream(key, names, scale, opts) {
+      var r = rec[key]; if (!r) return;
+      var j = 0;
+      var arrs = names.map(function () { return new Float64Array(N); });
+      for (var k = 0; k < N; k++) {
+        while (j + 1 < r.t.length && Math.abs(r.t[j + 1] - T[k]) <= Math.abs(r.t[j] - T[k])) j++;
+        var ok = Math.abs(r.t[j] - T[k]) <= ((opts && opts.hold) || 60);
+        for (var q = 0; q < names.length; q++) arrs[q][k] = ok ? r.v[q][j] * scale[q] : NaN;
+      }
+      names.forEach(function (nm, q) { cols.push({ name: nm, data: arrs[q] }); });
+    }
+    addStream('fi', ['kf_height_m', 'kf_velocity_mps', 'kf_accel_mps2'], [1, 1, 1]);
+    addStream('filt', ['filtered_alt_agl_m', 'filtered_accel_mps2'], [1, 1]);
+    for (var b = 0; b < 4; b++) addStream('baro' + b, ['baro' + b + '_pressure_pa', 'baro' + b + '_temp_c'], [1, 0.01]);
+    for (b = 0; b < 4; b++) addStream('imu' + b, ['imu' + b + '_ax_g', 'imu' + b + '_ay_g', 'imu' + b + '_az_g', 'imu' + b + '_gx_dps', 'imu' + b + '_gy_dps', 'imu' + b + '_gz_dps'], [1 / 1024, 1 / 1024, 1 / 1024, 1 / 16.4, 1 / 16.4, 1 / 16.4]);
+    addStream('ori', ['quat_w', 'quat_x', 'quat_y', 'quat_z'], [1e-4, 1e-4, 1e-4, 1e-4]);
+    addStream('gnss', ['gnss_lat', 'gnss_lon', 'gnss_sats'], [1, 1, 1], { hold: 1500 });
+    addStream('volt', ['battery_v'], [0.001], { hold: 1500 });
+    // state column (step function)
+    var st = new Float64Array(N), cur = NaN, si = 0;
+    var states = events.filter(function (e) { return e.kind === 'state'; });
+    for (var k = 0; k < N; k++) { while (si < states.length && states[si].ts <= T[k]) { cur = states[si].code; si++; } st[k] = cur; }
+    if (states.length) cols.push({ name: 'flight_state', data: st });
+    var evs = events.map(function (e) {
+      var label;
+      if (e.kind === 'state') label = 'State → ' + (CATS_STATES[e.code] || e.code);
+      else if (e.kind === 'event') {
+        var a = CATS_ACTIONS[e.action] || ('action ' + e.action);
+        label = (CATS_EVENTS[e.code] || ('Event ' + e.code)) + (e.action ? ' · ' + (e.action === 1 ? 'delay ' + e.arg + ' ms' : e.action <= 3 ? a + (e.arg ? ' ON' : ' OFF') : 'action ' + e.action + ' (arg ' + e.arg + ')') : '');
+      } else label = 'Error ' + e.code;
+      return { t: e.ts / 1000, label: label, kind: e.kind, code: e.code, action: e.action, arg: e.arg };
+    });
+    return { columns: cols, rows: N, version: version, events: evs, skippedBytes: skipped, stateNames: CATS_STATES };
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Column role detection                                               */
+  /* ------------------------------------------------------------------ */
+  var ROLES = {
+    time: { label: 'Time', units: ['s', 'ms', 'us'] },
+    flight_time: { label: 'Time since liftoff', units: ['s', 'ms', 'us'] },
+    altitude: { label: 'Altitude', units: ['m', 'ft'] },
+    velocity: { label: 'Vertical velocity', units: ['m/s', 'ft/s'] },
+    accel_vertical: { label: 'Vertical acceleration', units: ['m/s²', 'g'] },
+    accel_x: { label: 'Accel X', units: ['m/s²', 'g'] },
+    accel_y: { label: 'Accel Y', units: ['m/s²', 'g'] },
+    accel_z: { label: 'Accel Z', units: ['m/s²', 'g'] },
+    gyro_x: { label: 'Gyro X', units: ['°/s', 'rad/s'] },
+    gyro_y: { label: 'Gyro Y', units: ['°/s', 'rad/s'] },
+    gyro_z: { label: 'Gyro Z', units: ['°/s', 'rad/s'] },
+    pressure: { label: 'Pressure', units: ['Pa', 'hPa', 'kPa'] },
+    temperature: { label: 'Temperature', units: ['°C', 'K', '°F'] },
+    humidity: { label: 'Humidity', units: ['%'] },
+    lat: { label: 'Latitude', units: ['deg', 'deg×1e7'] },
+    lon: { label: 'Longitude', units: ['deg', 'deg×1e7'] },
+    gps_alt: { label: 'GPS altitude', units: ['m', 'ft'] },
+    sats: { label: 'GPS satellites', units: [''] },
+    state: { label: 'Flight state', units: [''] },
+    event: { label: 'Event name', units: [''] },
+    voltage: { label: 'Battery voltage', units: ['V', 'mV'] },
+    quat: { label: 'Orientation quaternion', units: [''] },
+    output: { label: 'Pyro / output channel', units: [''] },
+    control: { label: 'Control / airbrake cmd', units: [''] },
+    flag: { label: 'Status / fault flag', units: [''] },
+    counter: { label: 'Packet counter', units: [''] },
+    velocity_h: { label: 'Horizontal velocity', units: ['m/s'] },
+    accel_h: { label: 'Horizontal accel', units: ['m/s²', 'g'] },
+    other: { label: 'Other (plot only)', units: [''] },
+    ignore: { label: 'Ignore', units: [''] }
+  };
+
+  function norm(n) { return String(n).toLowerCase().replace(/\[.*?\]|\(.*?\)/g, function (m) { return '_' + m.slice(1, -1) + '_'; }).replace(/[^a-z0-9%²]+/g, '_').replace(/^_|_$/g, ''); }
+
+  // name rule table: [regex, role, extra]
+  var NAME_RULES = [
+    [/^(flight_time|time_since_liftoff|t_flight|t_since_launch|since_liftoff|met|t_plus)(_|$)/, 'flight_time'],
+    [/(since_apogee|since_)/, 'other'],
+    [/^(t|ts|time|timestamp|tick|ticks|millis|micros|t_us|t_ms|t_s|time_us|time_ms|time_s|timestamp_ms|timestamp_us|timestamp_s|uptime|clock|elapsed)(_|$)/, 'time'],
+    [/^(packet|pkt|seq|sequence|counter|cnt|frame|idx|index|msg_id|sample)(_|$)/, 'counter'],
+    [/(gps|gnss)_?(alt|altitude|height|msl)/, 'gps_alt'],
+    [/^(alt_msl|msl)$/, 'gps_alt'],
+    [/(^|_)(lat|latitude)(_|$)/, 'lat'],
+    [/(^|_)(lon|lng|long|longitude)(_|$)/, 'lon'],
+    [/(^|_)(siv|sats|sat|satellites|numsv|num_sv|nsat|fix_sats)(_|$)/, 'sats'],
+    [/(press|pressure|baro_p|pres)(_|$|[a-z])/, 'pressure'],
+    [/^p(_pa|_hpa|_kpa)?$/, 'pressure'],
+    [/(^|_)(temp|temperature|tmp)(_|$|\d)|^(t_c|t_degc|temp)/, 'temperature'],
+    [/(^|_)(hum|humidity|rh)(_|$|_pct|%)/, 'humidity'],
+    [/(vbat|v_bat|batt|battery|voltage|vin|v_in|vsys)/, 'voltage'],
+    [/(^|_)(q[0-3wxyz]|quat|quaternion)(_|$)/, 'quat'],
+    [/(a_vert|acc_vert|accel_vert|a_vertical|acc_vertical|accel_vertical|vert_acc|a_up|acc_up|vertical_acc)/, 'accel_vertical'],
+    [/^(ax|ay|az|accx|accy|accz)_(earth|world|ned|enu)$|^(acc|accel|a)_(earth|world)_?[xyz]$/, 'accel_earth'],
+    [/(^|_)(acc|accel|acceleration|a|imu\d?_a|imu_acc|high_g|hg_a|lsm_a|bmi_a|icm_a)_?([xyz])(_|$)/, 'accel_axis'],
+    [/(^|_)a([xyz])(_|$)/, 'accel_axis'],
+    [/(^|_)(gyro|gyr|rate|w|omega|imu\d?_g|g)_?([xyz])(_|$)/, 'gyro_axis'],
+    [/(^|_)(acc|accel|acceleration)(_|$)/, 'accel_vertical'],
+    [/^(v|vel|velocity|vz|v_z|v_vert|vertical_velocity|vspeed|v_up|speed_vert|kf_velocity|kf_v|vel_z)(_|$)/, 'velocity'],
+    [/(^|_)v([xy])(_|$)|^vel_[xy]$/, 'velocity_h'],
+    [/(velocity|_vel$|^vel_)/, 'velocity'],
+    [/^(h|alt|altitude|height|agl|baro_alt|alt_agl|kf_alt|kf_height|est_alt|filtered_alt|h_agl|z)(_|$)/, 'altitude'],
+    [/(altitude|height|_alt_|_alt$|^alt)/, 'altitude'],
+    [/^(fsm|state|phase|flight_state|flight_phase|stage|mode|status_state|fsm_state)(_|$)/, 'state'],
+    [/^(event|evt|events|message|msg|log|note|event_name)(_|$)/, 'event'],
+    [/(_on$|^pyro|_fire|ignit|^drogue|^main_|_deploy|^magnet|^retain|^chute|servo_en|_armed$|^arm)/, 'output'],
+    [/(ctrl|control|cmd|command|airbrake|brake|servo|actuator|^u$|_u$|duty|throttle)/, 'control'],
+    [/(_ok$|^ok_|fault|error|err$|^err|status|health|valid|active_|_active$|flags?$|warn)/, 'flag']
+  ];
+
+  function unitHint(nn) {
+    var m;
+    if (/(^|_)(us|usec|micros|µs)(_|$)/.test(nn) || /micros/.test(nn)) return 'us';
+    if (/(^|_)(ms|msec|millis)(_|$)/.test(nn) || /millis/.test(nn)) return 'ms';
+    if (/(^|_)(s|sec|secs|seconds)(_|$)/.test(nn)) return 's';
+    if (/(^|_)(ft|feet)(_|$)/.test(nn)) return 'ft';
+    if (/(^|_)(hpa|mbar)(_|$)/.test(nn)) return 'hPa';
+    if (/(^|_)kpa(_|$)/.test(nn)) return 'kPa';
+    if (/(^|_)pa(_|$)/.test(nn)) return 'Pa';
+    if (/(^|_)(g|gs)(_|$)/.test(nn)) return 'g';
+    if (/(^|_)(mps2|ms2|m_s2|m_s²|mss)(_|$)/.test(nn)) return 'm/s²';
+    if (/(^|_)(dps|deg_s)(_|$)/.test(nn)) return '°/s';
+    if (/(^|_)(rads|rad_s)(_|$)/.test(nn)) return 'rad/s';
+    if (/(^|_)mv(_|$)/.test(nn)) return 'mV';
+    if (/(^|_)(degf|f)(_|$)/.test(nn)) return '°F';
+    if (/(^|_)(k|kelvin)(_|$)/.test(nn)) return 'K';
+    return m;
+  }
+
+  function stats(a) {
+    var n = 0, mn = Infinity, mx = -Infinity, s = 0, inc = 0, dec = 0, prev = NaN, ints = true;
+    var uniq = new Set();
+    for (var i = 0; i < a.length; i++) {
+      var v = a[i]; if (v !== v) continue;
+      n++; s += v; if (v < mn) mn = v; if (v > mx) mx = v;
+      if (prev === prev) { if (v > prev) inc++; else if (v < prev) dec++; }
+      prev = v;
+      if (ints && v !== Math.round(v)) ints = false;
+      if (uniq.size <= 50) uniq.add(v);
+    }
+    return { n: n, min: mn, max: mx, mean: n ? s / n : NaN, inc: inc, dec: dec, ints: ints, uniq: uniq.size > 50 ? 51 : uniq.size, uniqVals: uniq.size <= 50 ? Array.from(uniq).sort(function (a, b) { return a - b; }) : null };
+  }
+  function median(a) {
+    var b = []; for (var i = 0; i < a.length; i++) if (a[i] === a[i]) b.push(a[i]);
+    if (!b.length) return NaN; b.sort(function (x, y) { return x - y; }); return b[b.length >> 1];
+  }
+  function medianDiff(a) {
+    var step = Math.max(1, Math.floor(a.length / 5000)), d = [];
+    for (var i = step; i < a.length; i += step) { var x = a[i] - a[i - 1]; if (x === x) d.push(x); }
+    return median(d);
+  }
+
+  function detectColumns(table, fileName) {
+    var cols = table.columns, res = {};
+    var timeFound = false;
+    cols.forEach(function (c) {
+      var nn = norm(c.name), r = { role: 'other', unit: '', reason: '', conf: 'low' };
+      if (!c.data) {
+        r.role = /event|evt|msg|message|state|log/.test(nn) ? 'event' : 'event';
+        r.reason = 'text column'; r.conf = 'high';
+        res[c.name] = r; return;
+      }
+      var st = c.stats = stats(c.data);
+      var hint = unitHint(nn);
+      var role = null, axis = null, matched = null;
+      for (var k = 0; k < NAME_RULES.length; k++) {
+        var m = NAME_RULES[k][0].exec(nn);
+        if (m) { role = NAME_RULES[k][1]; matched = m; break; }
+      }
+      if (role === 'accel_axis') { axis = (nn.match(/([xyz])(?=_|$)(?!.*[xyz](_|$))/) || [])[1] || (nn.match(/[xyz]/) || ['x'])[0]; role = 'accel_' + axis; }
+      if (role === 'gyro_axis') { axis = (nn.match(/([xyz])(?=_|$)(?!.*[xyz](_|$))/) || [])[1] || 'x'; role = 'gyro_' + axis; }
+      if (role === 'accel_earth') {
+        var ax2 = (nn.match(/[xyz]/) || ['z'])[0];
+        role = ax2 === 'z' ? 'accel_vertical' : 'accel_h';
+        r.frame = 'earth';
+      }
+      if (role) { r.reason = 'name'; r.conf = 'high'; }
+
+      // ambiguous: "baro" / unknown: decide by values
+      if (!role || nn === 'baro' || nn === 'bar') {
+        if (st.min > 20000 && st.max < 120000) { role = 'pressure'; r.reason = 'values look like pressure in Pa'; r.conf = 'med'; }
+        else if (nn === 'baro' || nn === 'bar') { role = 'altitude'; r.reason = '"baro" with altitude-like values'; r.conf = 'med'; }
+      }
+      // value-based guesses for unnamed columns
+      if (!role) {
+        if (!timeFound && st.inc > 0.98 * (st.n - 1) && st.uniq > 50) { role = 'time'; r.reason = 'monotonic values'; r.conf = 'med'; }
+        else if (st.uniqVals && st.uniq <= 2 && st.min >= 0 && st.max <= 1) { role = 'flag'; r.reason = '0/1 values'; r.conf = 'low'; }
+        else if (st.uniqVals && st.ints && st.uniq <= 12 && st.min >= 0) { role = 'state'; r.reason = 'few integer values'; r.conf = 'low'; }
+        else { role = 'other'; r.reason = 'not recognised'; r.conf = 'low'; }
+      }
+      // conflicts: second time column
+      if (role === 'time') { if (timeFound) { role = 'other'; r.reason = 'second time column'; } else timeFound = true; }
+      // state that is binary -> flag
+      if (role === 'state' && st.uniqVals && st.uniq <= 2 && st.max <= 1) role = 'flag';
+      if (role === 'output' && !(st.uniqVals && st.uniq <= 3)) role = 'control';
+      if (role === 'velocity' && /^(vx|vy|v_x|v_y)$/.test(nn)) role = 'velocity_h';
+      if ((role === 'accel_x' || role === 'accel_y') && cols.some(function (o) { return /^(vx|vy)$/.test(norm(o.name)); }) && !cols.some(function (o) { return /^az$/.test(norm(o.name)); })) {
+        role = 'accel_h'; r.reason = 'horizontal (paired with vx/vy)';
+      }
+      r.role = role;
+
+      // units
+      var md = 0;
+      if (role === 'time' || role === 'flight_time') {
+        md = medianDiff(c.data);
+        r.unit = hint && ['s', 'ms', 'us'].indexOf(hint) >= 0 ? hint : (md >= 400 ? 'us' : md >= 0.5 ? 'ms' : 's');
+        if (!hint) r.reason += ' · unit from sample spacing';
+      } else if (role === 'altitude' || role === 'gps_alt') r.unit = hint === 'ft' ? 'ft' : 'm';
+      else if (role === 'velocity' || role === 'velocity_h') r.unit = /ft/.test(nn) ? 'ft/s' : 'm/s';
+      else if (role === 'pressure') r.unit = hint && /pa/i.test(hint) ? hint : (st.mean > 20000 ? 'Pa' : st.mean > 200 ? 'hPa' : 'kPa');
+      else if (role === 'temperature') r.unit = hint === 'K' || st.mean > 200 ? 'K' : hint === '°F' ? '°F' : '°C';
+      else if (role === 'voltage') r.unit = hint === 'mV' || st.max > 100 ? 'mV' : 'V';
+      else if (/^gyro/.test(role)) r.unit = hint === 'rad/s' ? 'rad/s' : '°/s';
+      else if (/^accel/.test(role)) r.unit = hint === 'g' ? 'g' : hint === 'm/s²' ? 'm/s²' : null; // decided later with rest analysis
+      else if (role === 'humidity') r.unit = '%';
+      res[c.name] = r;
+    });
+    // lat/lon scaling (decided jointly)
+    var latC = cols.find(function (c) { return res[c.name].role === 'lat'; });
+    var lonC = cols.find(function (c) { return res[c.name].role === 'lon'; });
+    if (latC && latC.stats) {
+      var scale = 1, ml = Math.max(Math.abs(latC.stats.min), Math.abs(latC.stats.max));
+      var mo = lonC && lonC.stats ? Math.max(Math.abs(lonC.stats.min), Math.abs(lonC.stats.max)) : 0;
+      [1, 1e5, 1e6, 1e7].some(function (s) { if (ml / s <= 90 && mo / s <= 180) { scale = s; return true; } return false; });
+      var u = scale === 1 ? 'deg' : 'deg×1e' + Math.round(Math.log10(scale));
+      res[latC.name].unit = u; if (lonC) res[lonC.name].unit = u;
+      if (scale !== 1) { res[latC.name].reason += ' · integer degrees×' + scale.toExponential(0); }
+    }
+    // accelerometer unit & gravity. Body-axis triplets: gravity shows up in the vector magnitude whatever the orientation.
+    var accCols = cols.filter(function (c) { return c.data && /^accel_[xyz]$/.test(res[c.name].role); });
+    var groups = {};
+    accCols.forEach(function (c) { var key = norm(c.name).replace(/[xyz](?=_[a-z0-9]*$|$)/, '#'); (groups[key] = groups[key] || []).push(c); });
+    var tripletUnit = null;
+    Object.keys(groups).forEach(function (key) {
+      var g = groups[key]; if (g.length < 2) return;
+      var n = g[0].data.length, step = Math.max(1, Math.floor(n / 20000)), mags = [];
+      for (var i = 0; i < n; i += step) { var s2 = 0; for (var q = 0; q < g.length; q++) s2 += g[q].data[i] * g[q].data[i]; mags.push(Math.sqrt(s2)); }
+      var mm = median(mags), u = Math.abs(mm - 1) < 0.3 ? 'g' : Math.abs(mm - G) < 3 ? 'm/s²' : null;
+      g.forEach(function (c) {
+        var r = res[c.name]; if (!r.unit) r.unit = u || 'm/s²';
+        r.gravity = u ? 'included' : 'unknown'; r.restValue = median(c.data);
+        r.reason += u ? ' · |a| at rest ≈ 1 g' : '';
+      });
+      if (u) tripletUnit = u;
+    });
+    cols.forEach(function (c) {
+      var r = res[c.name];
+      if (!/^accel/.test(r.role) || !c.data || r.gravity) return;
+      var restMed = median(c.data);
+      if (!r.unit) {
+        if (Math.abs(Math.abs(restMed) - G) < 1.5) r.unit = 'm/s²';
+        else if (Math.abs(Math.abs(restMed) - 1) < 0.15 && c.stats.max < 40) r.unit = 'g';
+        else r.unit = tripletUnit || 'm/s²';
+      }
+      var gv = r.unit === 'g' ? 1 : G;
+      r.restValue = restMed;
+      r.gravity = Math.abs(Math.abs(restMed) - gv) < 0.25 * gv ? 'included' : 'removed';
+    });
+    return res;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Unit conversion                                                     */
+  /* ------------------------------------------------------------------ */
+  function toSI(role, unit, arr) {
+    var f = 1, off = 0;
+    switch (unit) {
+      case 'ms': f = 1e-3; break; case 'us': f = 1e-6; break;
+      case 'ft': f = 0.3048; break; case 'ft/s': f = 0.3048; break;
+      case 'g': f = G; break;
+      case 'rad/s': f = 180 / Math.PI; break;
+      case 'hPa': f = 100; break; case 'kPa': f = 1000; break;
+      case 'K': off = -273.15; break;
+      case 'mV': f = 1e-3; break;
+      case 'deg×1e5': f = 1e-5; break; case 'deg×1e6': f = 1e-6; break; case 'deg×1e7': f = 1e-7; break;
+    }
+    if (unit === '°F') { var o = new Float64Array(arr.length); for (var i = 0; i < arr.length; i++) o[i] = (arr[i] - 32) * 5 / 9; return o; }
+    if (f === 1 && off === 0) return arr;
+    var out = new Float64Array(arr.length);
+    for (var j = 0; j < arr.length; j++) out[j] = arr[j] * f + off;
+    return out;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Signal helpers                                                      */
+  /* ------------------------------------------------------------------ */
+  function idxAtTime(t, x) { // first index with t>=x (binary search)
+    var lo = 0, hi = t.length - 1; if (x <= t[0]) return 0; if (x > t[hi]) return hi;
+    while (lo < hi) { var mid = (lo + hi) >> 1; if (t[mid] < x) lo = mid + 1; else hi = mid; }
+    return lo;
+  }
+  function valueAt(t, y, x) { var i = idxAtTime(t, x); if (i > 0 && Math.abs(t[i - 1] - x) < Math.abs(t[i] - x)) i--; return y[i]; }
+  function smoothTime(t, y, win) { // centered moving average by time window (seconds), NaN-aware
+    var n = y.length, out = new Float64Array(n), s = 0, c = 0, lo = 0, hi = -1, h = win / 2;
+    for (var i = 0; i < n; i++) {
+      while (hi + 1 < n && t[hi + 1] <= t[i] + h) { hi++; if (y[hi] === y[hi]) { s += y[hi]; c++; } }
+      while (t[lo] < t[i] - h) { if (y[lo] === y[lo]) { s -= y[lo]; c--; } lo++; }
+      out[i] = c ? s / c : NaN;
+    }
+    return out;
+  }
+  function medianFilter(y, k) {
+    var n = y.length, out = new Float64Array(n), w = [], h = k >> 1;
+    for (var i = 0; i < n; i++) {
+      w.length = 0;
+      for (var j = Math.max(0, i - h); j <= Math.min(n - 1, i + h); j++) if (y[j] === y[j]) w.push(y[j]);
+      w.sort(function (a, b) { return a - b; });
+      out[i] = w.length ? w[w.length >> 1] : NaN;
+    }
+    return out;
+  }
+  function derivative(t, y, win) { // slope over +-win/2 window
+    var n = y.length, out = new Float64Array(n), lo = 0, hi = 0, h = win / 2;
+    for (var i = 0; i < n; i++) {
+      while (lo < i && t[lo] < t[i] - h) lo++;
+      while (hi < n - 1 && t[hi + 1] <= t[i] + h) hi++;
+      var dt = t[hi] - t[lo];
+      out[i] = dt > 0 ? (y[hi] - y[lo]) / dt : NaN;
+    }
+    return out;
+  }
+  function pressureToAlt(p, p0) {
+    var out = new Float64Array(p.length);
+    for (var i = 0; i < p.length; i++) out[i] = p[i] > 0 ? 44330.77 * (1 - Math.pow(p[i] / p0, 0.190263)) : NaN;
+    return out;
+  }
+  function rangeMedian(t, y, t0, t1) { var a = idxAtTime(t, t0), b = idxAtTime(t, t1); return median(y.subarray ? y.subarray(a, b + 1) : y.slice(a, b + 1)); }
+  function haversine(la1, lo1, la2, lo2) {
+    var R = 6371000, r = Math.PI / 180, dla = (la2 - la1) * r, dlo = (lo2 - lo1) * r;
+    var a = Math.sin(dla / 2) ** 2 + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin(dlo / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  }
+  function bearing(la1, lo1, la2, lo2) {
+    var r = Math.PI / 180, y = Math.sin((lo2 - lo1) * r) * Math.cos(la2 * r);
+    var x = Math.cos(la1 * r) * Math.sin(la2 * r) - Math.sin(la1 * r) * Math.cos(la2 * r) * Math.cos((lo2 - lo1) * r);
+    return (Math.atan2(y, x) / r + 360) % 360;
+  }
+  function speedOfSound(hAGL, groundTempC) { var T = groundTempC + 273.15 - 0.0065 * Math.max(0, hAGL); return Math.sqrt(1.4 * 287.05 * T); }
+
+  /* ------------------------------------------------------------------ */
+  /* Build a "source": convert mapped columns to SI channels             */
+  /* ------------------------------------------------------------------ */
+  function buildChannels(table, mapping) {
+    var ch = { byRole: {}, list: [] };
+    var timeCol = table.columns.find(function (c) { return mapping[c.name] && mapping[c.name].role === 'time'; });
+    var ftCol = table.columns.find(function (c) { return mapping[c.name] && mapping[c.name].role === 'flight_time'; });
+    var tc = timeCol || ftCol;
+    var t;
+    if (tc) t = toSI('time', mapping[tc.name].unit, tc.data);
+    else { t = new Float64Array(table.rows); for (var i = 0; i < t.length; i++) t[i] = i; }
+    // ensure time is a Float64Array copy and fix NaNs by forward fill
+    t = Float64Array.from(t);
+    for (i = 1; i < t.length; i++) if (!(t[i] === t[i])) t[i] = t[i - 1];
+    ch.t = t; ch.timeName = tc ? tc.name : '(row index)'; ch.timeIsFlight = !timeCol && !!ftCol;
+    table.columns.forEach(function (c) {
+      var m = mapping[c.name]; if (!m || m.role === 'ignore' || c === tc) return;
+      if (!c.data) { ch.list.push({ name: c.name, role: m.role, text: c.text }); if (!ch.byRole[m.role]) ch.byRole[m.role] = []; ch.byRole[m.role].push(ch.list[ch.list.length - 1]); return; }
+      var y = toSI(m.role, m.unit, c.data);
+      var siUnit = { altitude: 'm', gps_alt: 'm', velocity: 'm/s', velocity_h: 'm/s', pressure: 'Pa', temperature: '°C', voltage: 'V', humidity: '%', lat: '°', lon: '°', flight_time: 's' }[m.role] || (/^accel/.test(m.role) ? 'm/s²' : /^gyro/.test(m.role) ? '°/s' : '');
+      var o = { name: c.name, role: m.role, y: y, unit: siUnit, gravity: m.gravity, frame: m.frame };
+      ch.list.push(o);
+      (ch.byRole[m.role] = ch.byRole[m.role] || []).push(o);
+    });
+    return ch;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Flight analysis                                                     */
+  /* ------------------------------------------------------------------ */
+  function pickAltitude(ch) {
+    var alts = ch.byRole.altitude || [];
+    if (alts.length) {
+      // prefer names like h / alt / kf_height over baro / filtered; just keep detection order but prefer non-'baro'
+      var sorted = alts.slice().sort(function (a, b) { return score(b.name) - score(a.name); });
+      function score(n) { n = norm(n); return (/^(h|alt|altitude|kf_height|kf_height_m|height)$/.test(n) ? 3 : 0) + (/kf|kalman|est|fused/.test(n) ? 1 : 0) - (/filtered|agl/.test(n) ? 0.5 : 0); }
+      return { y: sorted[0].y, name: sorted[0].name, from: 'column' };
+    }
+    return null;
+  }
+
+  function thrustProxy(ch) {
+    // specific force along the up/thrust axis in m/s² (≈ +g at rest on the pad)
+    var verts = (ch.byRole.accel_vertical || []).slice().sort(function (a, b) {
+      function sc(n) { n = norm(n); return (/vert/.test(n) ? 2 : 0) + (/kf|filt/.test(n) ? -0.5 : 0); }
+      return sc(b.name) - sc(a.name);
+    });
+    var v = verts[0];
+    if (v) {
+      var gIncl = v.gravity === 'included', sgn = gIncl && median(v.y) < 0 ? -1 : 1;
+      var y = new Float64Array(v.y.length);
+      for (var i = 0; i < y.length; i++) y[i] = gIncl ? sgn * v.y[i] : v.y[i] + G;
+      return { y: y, name: v.name, src: v };
+    }
+    var best = null, bestPk = 0;
+    ['accel_x', 'accel_y', 'accel_z'].forEach(function (r) {
+      (ch.byRole[r] || []).forEach(function (a) {
+        var mx = -Infinity, mn = Infinity;
+        for (var i = 0; i < a.y.length; i++) { if (a.y[i] > mx) mx = a.y[i]; if (a.y[i] < mn) mn = a.y[i]; }
+        var sgn = mx >= -mn ? 1 : -1, pk = Math.max(mx, -mn);
+        if (pk > bestPk) { bestPk = pk; best = { a: a, sgn: sgn }; }
+      });
+    });
+    if (!best) return null;
+    var y2 = new Float64Array(best.a.y.length);
+    for (var k = 0; k < y2.length; k++) y2[k] = best.sgn * best.a.y[k];
+    return { y: y2, name: best.a.name + (best.sgn < 0 ? ' (inverted)' : ''), src: best.a, axis: true };
+  }
+
+  var FULL_SCALES = [2, 3, 4, 6, 8, 12, 16, 24, 30, 32, 40, 64, 100, 120, 200, 400];
+  function saturationCheck(ch, t0, t1) {
+    var out = [];
+    ch.list.forEach(function (c) {
+      if (!c.y || !/^accel/.test(c.role)) return;
+      var a = idxAtTime(ch.t, t0), b = idxAtTime(ch.t, t1), mx = -Infinity, mn = Infinity;
+      for (var i = 0; i < c.y.length; i++) { if (c.y[i] > mx) mx = c.y[i]; if (c.y[i] < mn) mn = c.y[i]; }
+      [mx, mn].forEach(function (lim) {
+        var gl = Math.abs(lim) / G;
+        var fs = FULL_SCALES.find(function (f) { return Math.abs(gl - f) / f < 0.004; });
+        if (!fs) return;
+        var cnt = 0; for (var i = a; i <= b; i++) if (Math.abs(c.y[i] - lim) < 1e-9) cnt++;
+        if (cnt >= 2) out.push({ name: c.name, g: fs, count: cnt });
+      });
+    });
+    return out;
+  }
+
+  function analyze(ch, opts) {
+    opts = opts || {};
+    var t = ch.t, n = t.length, notes = [], res = { notes: notes, events: [] }, i;
+    var hasEvents = (ch.byRole.event || []).length > 0;
+    if (n < 30) { res.ok = false; res.kind = hasEvents ? 'events' : 'aux'; return res; }
+    var dtMed = medianDiff(t); res.sampleRate = dtMed > 0 ? 1 / dtMed : NaN;
+    var gaps = [];
+    for (i = 1; i < n; i++) { var d = t[i] - t[i - 1]; if (d > Math.max(10 * dtMed, 0.25)) gaps.push({ t: t[i - 1], dur: d }); }
+    res.gaps = gaps;
+
+    var alt = pickAltitude(ch), altY = null, altName = null;
+    var pr = (ch.byRole.pressure || [])[0];
+    var thr = thrustProxy(ch);
+    var vel = (ch.byRole.velocity || [])[0];
+    if (alt) { altY = alt.y; altName = alt.name; }
+    if (!altY && !pr && !thr && !vel) { res.ok = false; res.kind = hasEvents ? 'events' : 'aux'; return res; }
+    var thrS = thr ? smoothTime(t, thr.y, Math.max(0.06, 2.5 * dtMed)) : null;
+
+    var p0 = NaN;
+    if (!altY && pr) { p0 = median(pr.y); altY = pressureToAlt(pr.y, p0); altName = 'altitude from ' + pr.name; res.altFromPressure = true; }
+    if (!altY && vel) { altY = new Float64Array(n); for (i = 1; i < n; i++) altY[i] = altY[i - 1] + (vel.y[i] + vel.y[i - 1]) / 2 * (t[i] - t[i - 1]); altName = 'integrated ' + vel.name; }
+
+    var tLift, liftMethod, iL, apI, tApo = NaN, apogee = NaN, ground = 0, altS = null, altSm = null;
+    var k = Math.max(3, Math.round(0.15 / (dtMed || 0.01)) | 1);
+    if (altY) {
+      altS = medianFilter(altY, Math.min(k, 15));
+      apI = 0; for (i = 0; i < n; i++) if (altS[i] > altS[apI] || !(altS[apI] === altS[apI])) apI = i;
+      var pre = Array.prototype.slice.call(altS.subarray(0, apI + 1)).filter(function (v) { return v === v; }).sort(function (a, b) { return a - b; });
+      var lowG = pre.length ? pre[Math.floor(pre.length * 0.05)] : 0;
+      var apoRel = altS[apI] - lowG;
+      if (!(apoRel > 15)) { res.ok = false; res.kind = hasEvents ? 'events' : 'noflight'; notes.push({ level: 'info', text: 'No climb larger than 15 m — treated as an auxiliary file.' }); return res; }
+      var thrH = Math.max(3, 0.01 * apoRel), lI = apI;
+      while (lI > 0 && altS[lI] - lowG > thrH) lI--;
+      tLift = t[lI]; liftMethod = 'altitude rise';
+    } else {
+      // acceleration only: liftoff = the largest sustained thrust event
+      var pk = 0; for (i = 0; i < n; i++) if (thrS[i] > thrS[pk]) pk = i;
+      if (!(thrS[pk] > 2.5 * G)) { res.ok = false; res.kind = 'aux'; return res; }
+      tLift = t[pk]; liftMethod = 'acceleration';
+    }
+    if (thr) {
+      var a0 = idxAtTime(t, tLift - 4), a1 = idxAtTime(t, tLift + 1.5);
+      for (i = a0; i <= a1; i++) if (thr.y[i] > 2.5 * G) {
+        var j = i; while (j > a0 && thr.y[j - 1] > 1.5 * G) j--;
+        tLift = t[j]; liftMethod = 'acceleration > 2.5 g'; break;
+      }
+    }
+    iL = idxAtTime(t, tLift);
+    var tPad0 = tLift - 10, tPad1 = tLift - 1;
+    if (altY) {
+      if (res.altFromPressure) {
+        p0 = rangeMedian(t, pr.y, tPad0, tPad1); if (!(p0 > 0)) p0 = median(pr.y);
+        altY = pressureToAlt(pr.y, p0); altS = medianFilter(altY, Math.min(k, 15)); res.padPressure = p0;
+      }
+      ground = rangeMedian(t, altS, tPad0, tPad1); if (!(ground === ground)) ground = altS[iL];
+      apI = iL; for (i = iL; i < n; i++) if (altS[i] > altS[apI]) apI = i;
+      tApo = t[apI]; apogee = altS[apI] - ground;
+      altSm = smoothTime(t, altY, dtMed > 0.05 ? 0.5 : 0.3);
+    } else apI = idxAtTime(t, tLift + 25);
+    var rawAlt = null, rawName = altName;
+    if (pr && !res.altFromPressure) { var pp0 = rangeMedian(t, pr.y, tPad0, tPad1); if (pp0 > 0) { rawAlt = pressureToAlt(pr.y, pp0); rawName = pr.name; } }
+    if (!rawAlt) { var bAlt = (ch.byRole.altitude || []).find(function (c) { return /baro/.test(norm(c.name)); }); if (bAlt && altY !== bAlt.y) { rawAlt = bAlt.y; rawName = bAlt.name; } }
+    var rawSm = rawAlt ? smoothTime(t, rawAlt, dtMed > 0.05 ? 0.5 : 0.3) : altSm;
+    var vBaro = rawSm ? derivative(t, rawSm, dtMed > 0.05 ? 0.6 : 0.4) : null;
+    res.baroSlopeName = rawName;
+    var vY = vel ? vel.y : vBaro, vName = vel ? vel.name : (vBaro ? 'slope of ' + altName : null);
+
+    // burnout: smoothed specific force falls below 1 g (net acceleration < 0) for ≥0.3 s
+    var tBurn = NaN, burnMethod = '', pkI = iL;
+    if (thr) {
+      var lim = idxAtTime(t, Math.min(tApo === tApo ? tApo : Infinity, tLift + 30));
+      for (i = iL; i <= lim; i++) if (thrS[i] > thrS[pkI]) pkI = i;
+      for (i = pkI; i <= lim; i++) {
+        if (thrS[i] < G) {
+          var e2 = idxAtTime(t, t[i] + 0.3), okb = true;
+          for (var q = i; q <= e2; q++) if (thrS[q] >= G) { okb = false; break; }
+          if (okb) { tBurn = t[i]; burnMethod = 'net acceleration turns negative'; break; }
+        }
+      }
+    }
+    // accel-integrated velocity (boost), drift-corrected so v(apogee)=0
+    var vAcc = null;
+    if (thr && altY) {
+      vAcc = new Float64Array(n).fill(NaN); var acc = 0; vAcc[iL] = 0;
+      for (i = iL + 1; i <= apI; i++) { var dt = t[i] - t[i - 1]; if (dt > 1) dt = dtMed; acc += ((thr.y[i] + thr.y[i - 1]) / 2 - G) * dt; vAcc[i] = acc; }
+      var drift = vAcc[apI] / ((t[apI] - t[iL]) || 1);
+      for (i = iL + 1; i <= apI; i++) vAcc[i] -= drift * (t[i] - t[iL]);
+    }
+    var vMaxSrc = vel ? vel.y : (vAcc && dtMed < 0.05 ? vAcc : vBaro), vmI = -1;
+    if (vMaxSrc) { vmI = iL; for (i = iL; i <= apI; i++) if (vMaxSrc[i] > vMaxSrc[vmI] || !(vMaxSrc[vmI] === vMaxSrc[vmI])) vmI = i; }
+    if (!(tBurn === tBurn) && vmI >= 0) { tBurn = t[vmI]; burnMethod = 'max velocity'; }
+
+    // max acceleration (net, along thrust axis)
+    var maxAcc = NaN, maxAccT = NaN;
+    if (thr) { var mI = iL, l3 = idxAtTime(t, tLift + 30); for (i = iL; i <= l3; i++) if (thr.y[i] > thr.y[mI]) mI = i; maxAcc = thr.y[mI] - G; maxAccT = t[mI]; }
+    var sats = saturationCheck(ch, tLift - 1, tLift + 30);
+
+    // landing
+    var tLand = NaN, landI = -1, landMethod = '';
+    if (altSm) {
+      var nearG = Math.max(30, 0.03 * apogee);
+      for (i = apI; i < n; i++) {
+        if (altS[i] - ground > nearG) continue;
+        var e = idxAtTime(t, t[i] + 3), span = t[e] - t[i];
+        if (span < 1) break;
+        var mn2 = Infinity, mx2 = -Infinity;
+        for (q = i; q <= e; q++) { if (altSm[q] < mn2) mn2 = altSm[q]; if (altSm[q] > mx2) mx2 = altSm[q]; }
+        if ((mx2 - mn2) / span < 0.8) { tLand = t[i]; landI = i; landMethod = 'altitude steady near ground'; break; }
+      }
+      if (!(tLand === tLand)) {
+        var lastAlt = altS[n - 1] - ground;
+        if (lastAlt < nearG && t[n - 1] > tApo + 5) {
+          for (i = apI; i < n; i++) if (altS[i] - ground < Math.max(3, lastAlt + 2)) { tLand = t[i]; landI = i; landMethod = 'log ends at ground level'; break; }
+        } else notes.push({ level: 'info', text: 'Log ends before touchdown — landing not detected.' });
+      }
+    }
+    // descent rates and main deployment
+    var desc = null;
+    if (altSm && tApo === tApo) {
+      var dStart = tApo + 3, dEnd = (tLand === tLand ? tLand : t[n - 1]) - 1;
+      if (dEnd - dStart > 6) {
+        var ts = [], vs = [];
+        for (var tt = dStart; tt <= dEnd; tt += 0.25) {
+          var a = idxAtTime(t, tt - 0.5), b = idxAtTime(t, tt + 0.5);
+          if (t[b] - t[a] > 0.3 && t[b] - t[a] < 2) { ts.push(tt); vs.push((altSm[b] - altSm[a]) / (t[b] - t[a])); }
+        }
+        if (ts.length > 20) {
+          var m = ts.length, p1 = [0], p2 = [0];
+          for (i = 0; i < m; i++) { p1.push(p1[i] + vs[i]); p2.push(p2[i] + vs[i] * vs[i]); }
+          var sse = function (a, b) { var c = b - a; if (c <= 0) return 0; var s = p1[b] - p1[a]; return p2[b] - p2[a] - s * s / c; };
+          var total = sse(0, m), best = { k: -1, e: total };
+          for (var kk = 8; kk < m - 8; kk++) { var ee = sse(0, kk) + sse(kk, m); if (ee < best.e) best = { k: kk, e: ee }; }
+          desc = {};
+          var r1 = best.k > 0 ? -p1[best.k] / best.k : NaN, r2 = best.k > 0 ? -(p1[m] - p1[best.k]) / (m - best.k) : NaN;
+          if (best.k > 0 && r1 > 1.3 * r2 && r1 - r2 > 4 && best.e < 0.6 * total) {
+            // knee: first point near the split where the rate stays below the midpoint for 2 s
+            var thrV = (r1 + r2) / 2, kS = best.k;
+            for (var z = Math.max(0, best.k - 20); z < Math.min(m - 8, best.k + 20); z++) {
+              var stay = true; for (var zz = z; zz < Math.min(m, z + 8); zz++) if (-vs[zz] >= thrV) { stay = false; break; }
+              if (stay) { kS = z; break; }
+            }
+            desc.splitT = ts[best.k];
+            desc.mainT = ts[kS];
+            desc.mainAlt = valueAt(t, altSm, desc.mainT) - ground;
+            desc.drogueRate = steady(ts, vs, ts[0], desc.mainT - 2);
+            desc.mainRate = steady(ts, vs, desc.mainT + 3, ts[m - 1]);
+          } else desc.singleRate = steady(ts, vs, ts[0], ts[m - 1]);
+        }
+      }
+    }
+    function steady(ts, vs, a, b) { var arr = []; for (var i = 0; i < ts.length; i++) if (ts[i] >= a && ts[i] <= b) arr.push(-vs[i]); return median(arr); }
+
+    // GPS
+    var gps = null, la = (ch.byRole.lat || [])[0], lo = (ch.byRole.lon || [])[0], sv = (ch.byRole.sats || [])[0];
+    if (la && lo) {
+      var valid = new Uint8Array(n);
+      for (i = 0; i < n; i++) valid[i] = la.y[i] === la.y[i] && lo.y[i] === lo.y[i] && !(la.y[i] === 0 && lo.y[i] === 0) && Math.abs(la.y[i]) <= 90 && (!sv || sv.y[i] >= 4) ? 1 : 0;
+      gps = { valid: valid, lat: la.y, lon: lo.y };
+      var padLa = [], padLo = [];
+      for (i = idxAtTime(t, tLift - 30); i <= idxAtTime(t, tLift - 0.5); i++) if (valid[i]) { padLa.push(la.y[i]); padLo.push(lo.y[i]); }
+      if (padLa.length) gps.pad = [median(padLa), median(padLo)];
+      var fe = tLand === tLand ? tLand : t[n - 1], outS = NaN, longest = null;
+      for (i = iL; i < n && t[i] <= fe + 600; i++) {
+        if (!valid[i] && !(outS === outS)) outS = t[i];
+        if (valid[i] && outS === outS) { var L = { from: outS, to: t[i] }; if (!longest || L.to - L.from > longest.to - longest.from) longest = L; outS = NaN; if (t[i] > fe) break; }
+      }
+      if (outS === outS) { var L2 = { from: outS, to: NaN }; if (!longest || t[n - 1] - outS > longest.to - longest.from) longest = L2; }
+      gps.outage = longest;
+      if (landI >= 0) for (i = landI; i < n; i++) if (valid[i]) { gps.landing = [la.y[i], lo.y[i]]; gps.landingFixT = t[i]; break; }
+      if (gps.pad && gps.landing) {
+        gps.drift = haversine(gps.pad[0], gps.pad[1], gps.landing[0], gps.landing[1]);
+        gps.bearing = bearing(gps.pad[0], gps.pad[1], gps.landing[0], gps.landing[1]);
+      }
+      if (!gps.pad) notes.push({ level: 'info', text: 'No valid GPS fix on the pad before liftoff.' });
+    }
+
+    var gT = opts.groundTempC !== undefined ? opts.groundTempC : 15;
+    res.ok = true; res.kind = altY ? 'flight' : 'accel';
+    res.tLift = tLift; res.liftMethod = liftMethod; res.tApo = tApo; res.apogee = apogee; res.ground = ground;
+    res.tBurn = tBurn; res.burnMethod = burnMethod; res.tLand = tLand; res.landMethod = landMethod;
+    if (vmI >= 0) {
+      res.maxV = vMaxSrc[vmI]; res.maxVT = t[vmI];
+      res.maxVName = vel ? vel.name : (vMaxSrc === vAcc ? 'integrated acceleration' : 'slope of ' + altName);
+      res.mach = res.maxV / speedOfSound(altS ? valueAt(t, altS, t[vmI]) - ground : 0, gT);
+    }
+    if (vBaro) { var mb = -Infinity, mbT = NaN; for (i = iL; i <= apI; i++) if (vBaro[i] > mb) { mb = vBaro[i]; mbT = t[i]; } res.maxVBaro = mb; res.maxVBaroT = mbT; }
+    res.maxAcc = maxAcc; res.maxAccT = maxAccT; res.accName = thr ? thr.name : null; res.saturation = sats;
+    res.desc = desc; res.gps = gps; res.altName = altName; res.velName = vName;
+    res.series = { alt: altY, altS: altSm, v: vY, vBaro: vBaro, vAcc: vAcc, thr: thr ? thr.y : null, ground: ground };
+
+    sats.forEach(function (s) { notes.push({ level: 'warn', text: 'Accelerometer "' + s.name + '" hit its ±' + s.g + ' g limit (' + s.count + ' samples) — peak acceleration from this sensor is underestimated.' }); });
+    var gEnd = tLand === tLand ? tLand + 5 : Math.min(t[n - 1], tLift + 300);
+    var fg = gaps.filter(function (gp) { return gp.t >= tLift - 5 && gp.t <= gEnd; });
+    fg.slice(0, 4).forEach(function (gp) { notes.push({ level: 'warn', text: 'Logging gap of ' + gp.dur.toFixed(2) + ' s at T' + fmtT(gp.t - tLift) + '.' }); });
+    if (fg.length > 4) notes.push({ level: 'warn', text: (fg.length - 4) + ' more logging gaps during the flight.' });
+    res.flightGaps = fg;
+    // status flags: drop-outs / faults during the flight
+    (ch.byRole.flag || []).forEach(function (c) {
+      if (!c.y) return;
+      var nn = norm(c.name), okType = /ok|valid|health|active|good/.test(nn), faultType = /fault|err|warn/.test(nn);
+      var a2 = idxAtTime(t, tLift - 2), b2 = idxAtTime(t, gEnd), bad = 0, trans = 0, prev = null;
+      for (var i2 = a2; i2 <= b2; i2++) { var v2 = c.y[i2]; if (!(v2 === v2)) continue; var isBad = okType ? v2 === 0 : faultType ? v2 !== 0 : false; if (isBad) bad++; if (prev !== null && isBad && !prev) trans++; prev = isBad; }
+      if (bad) notes.push({ level: 'warn', text: '"' + c.name + '" ' + (okType ? 'dropped to 0' : 'was non-zero') + ' ' + trans + '× during the flight (' + (100 * bad / Math.max(1, b2 - a2 + 1)).toFixed(1) + ' % of samples).' });
+    });
+    if (gps && gps.outage) notes.push({ level: 'info', text: 'GPS: longest loss of fix from T' + fmtT(gps.outage.from - tLift) + (gps.outage.to === gps.outage.to ? ' to T' + fmtT(gps.outage.to - tLift) : ' until the end of the log') + '.' });
+    if (vel && vBaro && res.maxVBaro > 30 && Math.abs(res.maxV - res.maxVBaro) / res.maxVBaro > 0.1)
+      notes.push({ level: 'warn', text: 'Logged velocity "' + vel.name + '" peaks at ' + res.maxV.toFixed(0) + ' m/s, but the slope of ' + rawName + ' only reaches ' + res.maxVBaro.toFixed(0) + ' m/s.' });
+    if (vel && tBurn === tBurn && burnMethod.indexOf('net') === 0 && res.maxVT - tBurn > 1.5)
+      notes.push({ level: 'warn', text: 'Velocity "' + vel.name + '" keeps rising for ' + (res.maxVT - tBurn).toFixed(1) + ' s after burnout (peak at T' + fmtT(res.maxVT - tLift) + ') — it should peak at burnout, so the on-board estimate looks biased.' });
+    return res;
+  }
+  function fmtT(x) { return (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(2) + ' s'; }
+
+  /* state transitions as events */
+  function stateEvents(ch, stateNames) {
+    var out = [];
+    (ch.byRole.state || []).forEach(function (s) {
+      var prev = NaN;
+      for (var i = 0; i < s.y.length; i++) {
+        var v = s.y[i]; if (v !== v) continue;
+        if (v !== prev) { if (prev === prev) out.push({ t: ch.t[i], label: s.name + ' → ' + ((stateNames && stateNames[v]) || v), kind: 'state', code: v, from: prev }); prev = v; }
+      }
+    });
+    (ch.byRole.output || []).forEach(function (s) {
+      var prev = NaN;
+      for (var i = 0; i < s.y.length; i++) {
+        var v = s.y[i]; if (v !== v) continue;
+        if (v !== prev) { if (prev === prev) out.push({ t: ch.t[i], label: s.name + (v ? ' ON' : ' OFF'), kind: 'output' }); prev = v; }
+      }
+    });
+    (ch.byRole.control || []).forEach(function (s) {
+      var on = false, thr = 0.05;
+      for (var i = 0; i < s.y.length; i++) {
+        var v = s.y[i]; if (v !== v) continue;
+        if (!on && Math.abs(v) > thr) { on = true; out.push({ t: ch.t[i], label: s.name + ' active', kind: 'control' }); }
+        else if (on && Math.abs(v) <= thr) { on = false; out.push({ t: ch.t[i], label: s.name + ' inactive', kind: 'control' }); }
+      }
+    });
+    (ch.byRole.event || []).forEach(function (s) {
+      if (!s.text) return;
+      var states = ch.byRole.state || [], newState = ch.list.find(function (c) { return norm(c.name) === 'new_state'; });
+      for (var i = 0; i < s.text.length; i++) {
+        if (!s.text[i]) continue;
+        var lab = s.text[i];
+        if (newState && newState.y) lab += newState.y[i] ? ' ON' : ' OFF';
+        out.push({ t: ch.t[i], label: lab, kind: 'logged' });
+      }
+    });
+    return out.sort(function (a, b) { return a.t - b.t; });
+  }
+
+  return {
+    G: G, ROLES: ROLES, parseCSV: parseCSV, parseCATS: parseCATS, looksLikeCATS: looksLikeCATS, detectColumns: detectColumns,
+    buildChannels: buildChannels, analyze: analyze, stateEvents: stateEvents, idxAtTime: idxAtTime, valueAt: valueAt,
+    median: median, norm: norm, haversine: haversine, smoothTime: smoothTime, CATS_STATES: CATS_STATES, fmtT: fmtT, stats: stats
+  };
+})();
+if (typeof module !== 'undefined') module.exports = RL;
+</script>
+<script>/* Flight Log Lab — UI layer */
+(function () {
+  'use strict';
+  var G = RL.G;
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  function h(tag, attrs) {
+    var e = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      var v = attrs[k]; if (v === undefined || v === null || v === false) continue;
+      if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v; else if (k === 'html') e.innerHTML = v;
+      else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v); else if (k === 'style') e.style.cssText = v; else e.setAttribute(k, v === true ? '' : v);
+    }
+    for (var i = 2; i < arguments.length; i++) { var c = arguments[i]; if (c == null || c === false) continue; if (Array.isArray(c)) c.forEach(function (x) { if (x != null && x !== false) e.appendChild(typeof x === 'string' ? document.createTextNode(x) : x); }); else e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }
+    return e;
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function seriesColor(i) { return cssVar('--series-' + ((i % 8) + 1)); }
+  function fin(x) { return typeof x === 'number' && isFinite(x); }
+  function f(x, d, unit) { if (!fin(x)) return '—'; return x.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }) + (unit ? ' ' + unit : ''); }
+  function fT(x) { if (!fin(x)) return '—'; return 'T' + (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(2) + ' s'; }
+  function toast(msg) { var t = h('div', { class: 'toast', text: msg }); document.body.appendChild(t); setTimeout(function () { t.remove(); }, 3200); }
+  var store = {
+    get: function (k, d) { try { var v = localStorage.getItem('fll:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem('fll:' + k, JSON.stringify(v)); } catch (e) { } }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* State                                                               */
+  /* ------------------------------------------------------------------ */
+  var S = {
+    files: [],          // {id, name, table, mapping, kind, cats}
+    sources: [],        // built from files
+    meta: store.get('sourceMeta', {}), // key -> {label, offset}
+    settings: { target: store.get('target', ''), groundTemp: store.get('groundTemp', 20), ref: null, range: 'flight', showLogged: true, showDerived: false },
+    tab: 'overview', charts: [], explorerSel: {}
+  };
+  var nextId = 1;
+
+  /* ------------------------------------------------------------------ */
+  /* Files                                                               */
+  /* ------------------------------------------------------------------ */
+  function headerSig(table) { return table.columns.map(function (c) { return c.name; }).join('|'); }
+  function profiles() { return store.get('profiles', {}); }
+
+  function readFile(file) {
+    return new Promise(function (res, rej) {
+      var fr = new FileReader();
+      fr.onload = function () { res(fr.result); }; fr.onerror = function () { rej(fr.error); };
+      fr.readAsArrayBuffer(file);
+    });
+  }
+  function busy(on, text) { $('#busy').classList.toggle('hidden', !on); if (text) $('#busyText').textContent = text; }
+  function tick() { return new Promise(function (r) { setTimeout(r, 16); }); }
+
+  async function addFiles(list) {
+    list = Array.prototype.slice.call(list);
+    if (!list.length) return;
+    for (var i = 0; i < list.length; i++) {
+      var file = list[i];
+      busy(true, 'Reading ' + file.name + ' (' + (file.size / 1e6).toFixed(1) + ' MB)…'); await tick();
+      try {
+        var buf = await readFile(file), table, kind = 'csv';
+        if (RL.looksLikeCATS(buf)) { table = RL.parseCATS(buf); kind = 'cats'; }
+        else {
+          var text = new TextDecoder('utf-8').decode(buf);
+          if (/[\x00-\x08\x0e-\x1f]/.test(text.slice(0, 2000))) throw new Error('binary file in an unknown format');
+          table = RL.parseCSV(text);
+        }
+        if (!table.rows) throw new Error('no data rows found');
+        busy(true, 'Detecting columns in ' + file.name + '…'); await tick();
+        var mapping = RL.detectColumns(table, file.name);
+        var prof = profiles()[headerSig(table)];
+        if (prof && prof.mapping) for (var k in prof.mapping) if (mapping[k]) { Object.assign(mapping[k], prof.mapping[k]); mapping[k].reason = 'saved profile'; mapping[k].conf = 'high'; }
+        var stateNames = kind === 'cats' ? { flight_state: RL.CATS_STATES } : (prof && prof.stateNames) || {};
+        S.files.push({ id: nextId++, name: file.name, table: table, mapping: mapping, kind: kind, stateNames: stateNames, profileLabel: prof && prof.label });
+      } catch (e) {
+        console.error(e); toast('Could not read ' + file.name + ': ' + e.message);
+      }
+    }
+    busy(true, 'Analysing flight…'); await tick();
+    rebuild();
+    busy(false);
+  }
+
+  /* group files sharing an identical clock, attach event files to boards */
+  function timeKey(fl) {
+    var tc = fl.table.columns.find(function (c) { return fl.mapping[c.name] && fl.mapping[c.name].role === 'time'; });
+    if (!tc) return null;
+    return { name: RL.norm(tc.name), unit: fl.mapping[tc.name].unit, n: fl.table.rows, first: tc.data[0], last: tc.data[fl.table.rows - 1], key: RL.norm(tc.name) + '|' + fl.table.rows + '|' + tc.data[0] + '|' + tc.data[fl.table.rows - 1] };
+  }
+  function stem(n) { return n.replace(/\.[^.]+$/, '').replace(/^[0-9a-f]{8}-/, ''); }
+
+  function rebuild() {
+    var groups = {}, order = [];
+    S.files.forEach(function (fl) {
+      var tk = fl.kind === 'csv' ? timeKey(fl) : null;
+      var key = tk ? 'T:' + tk.key : 'F:' + fl.id;
+      if (!groups[key]) { groups[key] = []; order.push(key); }
+      groups[key].push(fl);
+    });
+    var old = {}; S.sources.forEach(function (s) { old[s.key] = s; });
+    S.sources = order.map(function (key, idx) {
+      var fls = groups[key];
+      var table, mapping = {}, stateNames = {};
+      if (fls.length === 1) { table = fls[0].table; mapping = fls[0].mapping; stateNames = fls[0].stateNames; }
+      else {
+        var cols = [], names = {};
+        fls.forEach(function (fl, fi) {
+          fl.table.columns.forEach(function (c) {
+            var m = fl.mapping[c.name];
+            if (names[c.name]) {
+              if (m && (m.role === 'time' || m.role === 'counter')) return; // shared clock / counter
+              var nn = c.name + '_' + stem(fl.name); cols.push({ name: nn, data: c.data, text: c.text }); mapping[nn] = m; names[nn] = 1; return;
+            }
+            names[c.name] = 1; cols.push(c); mapping[c.name] = m;
+          });
+          Object.assign(stateNames, fl.stateNames);
+        });
+        table = { columns: cols, rows: fls[0].table.rows };
+      }
+      var skey = fls.map(function (x) { return x.name; }).sort().join(' + ');
+      var meta = S.meta[skey] || {};
+      var label = meta.label || fls[0].profileLabel || (fls[0].kind === 'cats' ? 'CATS Vega · ' + stem(fls[0].name) : fls.map(function (x) { return stem(x.name); }).join(' + '));
+      return { id: 's' + idx, key: skey, files: fls, table: table, mapping: mapping, stateNames: stateNames, kind: fls[0].kind, label: label, offset: meta.offset || 0, cats: fls[0].kind === 'cats' ? fls[0].table : null };
+    });
+    S.sources.forEach(function (s, i) { s.slot = i; analyzeSource(s); });
+    // sync auxiliary sources (event logs) to a flight board on the same clock
+    S.sources.forEach(function (s) {
+      if (s.an.ok) return;
+      var tc = s.ch.timeName ? RL.norm(s.ch.timeName) : null; if (!tc) return;
+      var t0 = s.ch.t[0], t1 = s.ch.t[s.ch.t.length - 1];
+      var tgt = S.sources.find(function (o) { return o !== s && o.an.ok && RL.norm(o.ch.timeName) === tc && o.ch.t[0] <= t1 && o.ch.t[o.ch.t.length - 1] >= t0; });
+      if (tgt) { s.syncTo = tgt; s.slot = tgt.slot; if (!S.meta[s.key] || !S.meta[s.key].label) s.label = tgt.label + ' · ' + stem(s.files[0].name); }
+    });
+    var slot = 0; S.sources.forEach(function (s) { if (!s.syncTo) s.slot = slot++; });
+    S.sources.forEach(function (s) { if (s.syncTo) s.slot = s.syncTo.slot; });
+    // reference board: highest sample rate among sources with altitude+velocity
+    var flights = S.sources.filter(function (s) { return s.an.ok && s.an.kind === 'flight'; });
+    if (!S.settings.ref || !S.sources.some(function (s) { return s.key === S.settings.ref; })) {
+      var best = flights.slice().sort(function (a, b) {
+        function sc(s) { return (s.ch.byRole.velocity ? 2 : 0) + (s.ch.byRole.accel_vertical || s.ch.byRole.accel_x ? 1 : 0) + Math.min(1, (s.an.sampleRate || 0) / 100) - (s.an.flightGaps || []).length * 0.3; }
+        return sc(b) - sc(a);
+      })[0];
+      S.settings.ref = best ? best.key : null;
+    }
+    render();
+  }
+
+  function analyzeSource(s) {
+    s.ch = RL.buildChannels(s.table, s.mapping);
+    s.an = RL.analyze(s.ch, { groundTempC: +S.settings.groundTemp });
+    // logged events
+    var ev = RL.stateEvents(s.ch, s.stateNames);
+    if (s.cats) {
+      ev = ev.filter(function (e) { return !(e.kind === 'state' && /flight_state/.test(e.label)); });
+      ev = ev.concat(s.cats.events.map(function (e) { return { t: e.t, label: e.label, kind: 'logged' }; }));
+    }
+    s.logged = ev.sort(function (a, b) { return a.t - b.t; });
+  }
+  function lift(s) { if (s.an && s.an.ok) return s.an.tLift - s.offset; if (s.syncTo) return lift(s.syncTo) ; return null; }
+  function tp(s, t) { var L = lift(s); return L == null ? NaN : t - L; }
+  function refSource() { return S.sources.find(function (s) { return s.key === S.settings.ref; }) || S.sources.find(function (s) { return s.an.ok; }); }
+  function flightSources() { return S.sources.filter(function (s) { return s.an.ok; }); }
+
+  function detectedEvents(s) {
+    var a = s.an, L = lift(s), out = [];
+    if (!a.ok) return out;
+    function add(t, label, extra) { if (fin(t)) out.push(Object.assign({ t: t - L, label: label, kind: 'detected', src: s }, extra || {})); }
+    add(a.tLift, 'Liftoff', { how: a.liftMethod });
+    add(a.tBurn, 'Burnout', { how: a.burnMethod });
+    if (fin(a.maxVT)) add(a.maxVT, 'Max velocity ' + f(a.maxV, 0, 'm/s'), { minor: true });
+    add(a.tApo, 'Apogee ' + f(a.apogee, 0, 'm'));
+    if (a.desc && fin(a.desc.mainT)) add(a.desc.mainT, 'Main canopy (descent slows)', { how: 'descent-rate step' });
+    add(a.tLand, 'Landing', { how: a.landMethod });
+    return out;
+  }
+  function allEvents() {
+    var out = [];
+    S.sources.forEach(function (s) {
+      detectedEvents(s).forEach(function (e) { out.push(e); });
+      var L = lift(s);
+      (s.logged || []).forEach(function (e) { out.push({ t: L == null ? NaN : e.t - L, rawT: e.t, label: e.label, kind: e.kind === 'logged' ? 'logged' : 'logged', sub: e.kind, src: s }); });
+    });
+    return out.sort(function (a, b) { return (fin(a.t) ? a.t : 1e12) - (fin(b.t) ? b.t : 1e12); });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Ranges                                                              */
+  /* ------------------------------------------------------------------ */
+  function currentRange() {
+    var fs = flightSources(); if (!fs.length) return null;
+    var r = S.settings.range, ref = refSource() && refSource().an.ok ? refSource() : fs[0], a = ref.an, L = lift(ref);
+    var maxOf = function (fn) { var m = -Infinity; fs.forEach(function (s) { var v = fn(s); if (fin(v) && v > m) m = v; }); return m; };
+    if (r === 'boost') return [-1.5, Math.max(4, (fin(a.tBurn) ? a.tBurn - L : 3) + 3)];
+    if (r === 'ascent') return [-2, (fin(a.tApo) ? a.tApo - L : 30) + 6];
+    if (r === 'flight') {
+      var end = maxOf(function (s) { return fin(s.an.tLand) ? s.an.tLand - lift(s) : NaN; });
+      if (!fin(end)) end = maxOf(function (s) { return s.ch.t[s.ch.t.length - 1] - lift(s); });
+      return [-5, end + 10];
+    }
+    var mn = Infinity, mx = -Infinity;
+    S.sources.forEach(function (s) { var L2 = lift(s); if (L2 == null) return; mn = Math.min(mn, s.ch.t[0] - L2); mx = Math.max(mx, s.ch.t[s.ch.t.length - 1] - L2); });
+    return [mn, mx];
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Charts (uPlot)                                                      */
+  /* ------------------------------------------------------------------ */
+  function decimate(x, y, x0, x1, maxPts, gapDt) {
+    var a = RL.idxAtTime(x, x0), b = RL.idxAtTime(x, x1);
+    if (a > 0) a--; if (b < x.length - 1) b++;
+    var n = b - a + 1, xs = [], ys = [];
+    if (n <= maxPts) {
+      for (var i = a; i <= b; i++) {
+        if (gapDt && i > a && x[i] - x[i - 1] > gapDt) { xs.push((x[i] + x[i - 1]) / 2); ys.push(null); }
+        xs.push(x[i]); ys.push(fin(y[i]) ? y[i] : null);
+      }
+      return [xs, ys];
+    }
+    var buckets = Math.floor(maxPts / 2), bw = (x[b] - x[a]) / buckets, j = a;
+    for (var k = 0; k < buckets && j <= b; k++) {
+      var end = x[a] + (k + 1) * bw, mi = -1, ma = -1;
+      for (; j <= b && x[j] <= end; j++) { if (!fin(y[j])) continue; if (mi < 0 || y[j] < y[mi]) mi = j; if (ma < 0 || y[j] > y[ma]) ma = j; }
+      if (mi < 0) { xs.push(end - bw / 2); ys.push(null); continue; }
+      if (mi <= ma) { xs.push(x[mi]); ys.push(y[mi]); if (ma !== mi) { xs.push(x[ma]); ys.push(y[ma]); } }
+      else { xs.push(x[ma]); ys.push(y[ma]); xs.push(x[mi]); ys.push(y[mi]); }
+    }
+    return [xs, ys];
+  }
+  function medDt(x) { var d = [], st = Math.max(1, Math.floor(x.length / 3000)); for (var i = st; i < x.length; i += st) d.push(x[i] - x[i - 1]); d.sort(function (a, b) { return a - b; }); return d[d.length >> 1] || 0; }
+
+  /* spec: {title, unit, series:[{label, color, x, y, dash, step, width}], range, events, height, syncKey, yMin} */
+  function makeChart(container, spec) {
+    var wrap = h('div', { class: 'chart' }); container.appendChild(wrap);
+    var gapCache = spec.series.map(function (s) { var m = medDt(s.x); return Math.max(10 * m, 0.25); });
+    function build(r) {
+      var tables = [], modes = [];
+      var width = Math.max(300, wrap.clientWidth || 800);
+      spec.series.forEach(function (s, i) {
+        var d = decimate(s.x, s.y, r[0], r[1], Math.round(width * 2), gapCache[i]);
+        if (!d[0].length) d = [[r[0]], [null]];
+        tables.push(d); modes.push([1, 1]);
+      });
+      return uPlot.join(tables, modes);
+    }
+    var range = spec.range.slice(), initRange = spec.range.slice();
+    var axisStroke = cssVar('--axis'), grid = cssVar('--grid'), font = '11px ' + cssVar('--mono');
+    var opts = {
+      width: Math.max(300, wrap.clientWidth || 800), height: spec.height || 260,
+      title: spec.titleInChart || undefined,
+      cursor: { sync: spec.syncKey ? { key: spec.syncKey, setSeries: false } : undefined, drag: { x: true, y: false, setScale: false }, points: { size: 6 } },
+      select: { show: true },
+      legend: { live: true },
+      scales: { x: { time: false, range: function () { return range; } }, y: { range: function (u, mn, mx) { if (mn == null) return [0, 1]; var p = (mx - mn) * 0.06 || 1; var lo = spec.yMin != null ? Math.min(spec.yMin, mn - p) : mn - p; return [lo, mx + p]; } } },
+      axes: [
+        { stroke: axisStroke, grid: { stroke: grid, width: 1 }, ticks: { stroke: grid }, font: font, values: function (u, v) { return v.map(function (x) { return String(+x.toFixed(3)); }); }, label: 'T+ (s)', labelFont: '11px ' + cssVar('--sans'), labelSize: 18 },
+        { stroke: axisStroke, grid: { stroke: grid, width: 1 }, ticks: { stroke: grid }, font: font, size: function (u, values) { var m = 0; (values || []).forEach(function (v) { m = Math.max(m, String(v).length); }); return Math.max(40, m * 7 + 26); }, label: spec.unit || '', labelFont: '11px ' + cssVar('--sans'), labelSize: 16 }
+      ],
+      series: [{ label: 'T+', value: function (u, v) { return v == null ? '—' : v.toFixed(2) + ' s'; } }].concat(spec.series.map(function (s) {
+        return {
+          label: s.label, stroke: s.color, width: s.width || 1.6, dash: s.dash, spanGaps: false,
+          paths: s.step ? uPlot.paths.stepped({ align: 1 }) : undefined,
+          value: function (u, v) { return v == null ? '—' : (Math.abs(v) >= 1000 ? v.toFixed(0) : Math.abs(v) >= 100 ? v.toFixed(1) : v.toFixed(2)) + (spec.unit && !s.noUnit ? ' ' + spec.unit : ''); },
+          points: { show: false }
+        };
+      })),
+      hooks: {
+        draw: [function (u) {
+          var evs = (spec.events || []).filter(function (e) { return e.t >= range[0] && e.t <= range[1]; });
+          if (!evs.length) return;
+          var ctx = u.ctx, top = u.bbox.top, bot = u.bbox.top + u.bbox.height, dpr = devicePixelRatio || 1;
+          ctx.save(); ctx.font = (10 * dpr) + 'px ' + cssVar('--sans');
+          var lanes = [-1e9, -1e9, -1e9];
+          evs.forEach(function (e) {
+            var x = Math.round(u.valToPos(e.t, 'x', true)) + 0.5;
+            ctx.strokeStyle = e.color || axisStroke; ctx.globalAlpha = e.logged ? 0.45 : 0.75; ctx.lineWidth = dpr;
+            ctx.setLineDash(e.logged ? [2 * dpr, 3 * dpr] : [5 * dpr, 4 * dpr]);
+            ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bot); ctx.stroke();
+            var w = ctx.measureText(e.label).width + 8 * dpr, lane = 0;
+            while (lane < lanes.length && lanes[lane] > x) lane++;
+            if (lane >= lanes.length) return;
+            lanes[lane] = x + w;
+            ctx.globalAlpha = 1; ctx.setLineDash([]);
+            ctx.fillStyle = cssVar('--surface-1'); ctx.globalAlpha = 0.85;
+            ctx.fillRect(x + 2 * dpr, top + 2 * dpr + lane * 14 * dpr, w - 4 * dpr, 12 * dpr);
+            ctx.globalAlpha = 1; ctx.fillStyle = cssVar('--text-secondary');
+            ctx.fillText(e.label, x + 4 * dpr, top + 11 * dpr + lane * 14 * dpr);
+          });
+          ctx.restore();
+        }],
+        setSelect: [function (u) {
+          if (u.select.width < 5) return;
+          var a = u.posToVal(u.select.left, 'x'), b = u.posToVal(u.select.left + u.select.width, 'x');
+          zoomTo(u, [a, b]);
+          u.setSelect({ left: 0, top: 0, width: 0, height: 0 }, false);
+        }],
+        ready: [function (u) { u.over.addEventListener('dblclick', function () { zoomTo(u, initRange); }); }]
+      }
+    };
+    function zoomTo(u, r) { range = r; u.setData(build(r), false); u.setScale('x', { min: r[0], max: r[1] }); u.redraw(); if (spec.onZoom) spec.onZoom(r); }
+    var u = new uPlot(opts, build(range), wrap);
+    var ro = new ResizeObserver(function () { var w = wrap.clientWidth; if (w && Math.abs(w - u.width) > 4) { u.setSize({ width: w, height: opts.height }); } });
+    ro.observe(wrap);
+    var chart = { u: u, wrap: wrap, destroy: function () { ro.disconnect(); u.destroy(); }, zoomTo: function (r) { zoomTo(u, r); }, spec: spec };
+    S.charts.push(chart);
+    return chart;
+  }
+  function destroyCharts() { S.charts.forEach(function (c) { try { c.destroy(); } catch (e) { } }); S.charts = []; }
+
+  function eventMarkers(opts) {
+    opts = opts || {};
+    var ref = refSource(); if (!ref) return [];
+    var out = detectedEvents(ref).filter(function (e) { return !e.minor; }).map(function (e) { return { t: e.t, label: e.label.replace(/ [\d,]+ m(\/s)?$/, ''), color: cssVar('--text-muted') }; });
+    if (S.settings.showLogged && opts.logged !== false) {
+      S.sources.forEach(function (s) {
+        var L = lift(s); if (L == null) return;
+        var seen = {};
+        (s.logged || []).forEach(function (e) {
+          if (e.kind === 'control') return;
+          var t = e.t - L, k = e.label.replace(/ (ON|OFF)$/, '') + Math.round(t * 2);
+          if (seen[k]) return; seen[k] = 1;
+          if (!/ OFF$|inactive/.test(e.label)) out.push({ t: t, label: e.label, color: seriesColor(s.slot), logged: true });
+        });
+      });
+    }
+    return out;
+  }
+  function chartCard(parent, title, sub, build, extra) {
+    var card = h('div', { class: 'card' });
+    var pngBtn = h('button', { class: 'btn ghost small', text: 'PNG', title: 'Download this chart as an image' });
+    card.appendChild(h('h3', null, title, sub ? h('span', { class: 'sub', text: sub }) : null, h('span', { class: 'spacer' }), extra || null, pngBtn));
+    parent.appendChild(card);
+    var c = build(card);
+    pngBtn.addEventListener('click', function () { if (c && c.u) downloadCanvas(c.u, title); });
+    if (!downloadsCap) pngBtn.classList.add('hidden');
+    return card;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Rendering                                                           */
+  /* ------------------------------------------------------------------ */
+  function render() {
+    var has = S.sources.length > 0;
+    $('#app').classList.toggle('hidden', !has);
+    $('#drop').classList.toggle('compact', has);
+    $('#chatFab').classList.toggle('hidden', !has || !sampleCap);
+    $('#exportBtn').disabled = !has; $('#clearBtn').disabled = !has;
+    if (has) { $('#drop h2').textContent = 'Add more files'; $('#drop p').textContent = 'Drop more logs from the same launch, or click to browse.'; }
+    else { $('#drop h2').textContent = 'Drop your flight logs here'; }
+    $('#drop .formats').classList.toggle('hidden', has);
+    if (!has) { destroyCharts(); return; }
+    renderSources(); renderSettings(); renderTab();
+    updateSuggestions();
+  }
+
+  function renderSources() {
+    var box = $('#sources'); box.innerHTML = '';
+    S.sources.forEach(function (s) {
+      var a = s.an, kindTag = s.kind === 'cats' ? 'CATS binary v' + (s.cats.version || '?') : 'CSV';
+      var desc = a.ok ? (a.kind === 'flight' ? 'Flight detected' : 'Boost detected (acceleration only)') : (s.syncTo ? 'Event log, synced to ' + s.syncTo.label : 'No flight found');
+      var label = h('input', { class: 'label', value: s.label, 'aria-label': 'Board name', onchange: function (e) { s.label = e.target.value || s.label; (S.meta[s.key] = S.meta[s.key] || {}).label = s.label; store.set('sourceMeta', S.meta);
+        var ps = profiles(); s.files.forEach(function (fl) { var k = headerSig(fl.table); ps[k] = Object.assign(ps[k] || { name: fl.name }, { label: s.label }); fl.profileLabel = s.label; }); store.set('profiles', ps);
+        render(); } });
+      var offIn = h('input', { type: 'number', step: '0.01', value: s.offset || 0, style: 'width:70px;background:var(--surface-2);border:1px solid var(--border);border-radius:5px;padding:1px 5px;font-size:12px', title: 'Shift this board in time (seconds) to fine-tune alignment', onchange: function (e) { s.offset = +e.target.value || 0; (S.meta[s.key] = S.meta[s.key] || {}).offset = s.offset; store.set('sourceMeta', S.meta); render(); } });
+      box.appendChild(h('div', { class: 'src' },
+        h('span', { class: 'swatch', style: 'background:' + seriesColor(s.slot) }),
+        h('div', { class: 'body' }, label,
+          h('div', { class: 'files', text: s.files.map(function (x) { return x.name; }).join(' · ') }),
+          h('div', { class: 'meta' }, h('span', { class: 'tag', text: kindTag }), (s.files.length > 1 ? h('span', { class: 'tag', text: 'merged · shared clock' }) : null), desc + ' · ' + s.table.rows.toLocaleString() + ' rows' + (fin(a.sampleRate) ? ' · ' + a.sampleRate.toFixed(0) + ' Hz' : '')),
+          h('div', { class: 'row' },
+            h('button', { class: 'btn small', text: 'Columns (' + Object.keys(s.mapping).length + ')', onclick: function () { openMapping(s); } }),
+            a.ok ? h('span', { class: 'dim', style: 'font-size:12px;display:inline-flex;align-items:center;gap:4px;margin-left:6px' }, 'offset', offIn, 's') : null,
+            h('button', { class: 'btn ghost small', text: 'Remove', onclick: function () { var ids = s.files.map(function (x) { return x.id; }); S.files = S.files.filter(function (x) { return ids.indexOf(x.id) < 0; }); rebuild(); } })
+          ))));
+    });
+  }
+  function renderSettings() {
+    var sel = $('#refSel'); sel.innerHTML = '';
+    flightSources().filter(function (s) { return s.an.kind === 'flight'; }).forEach(function (s) { sel.appendChild(h('option', { value: s.key, text: s.label, selected: s.key === S.settings.ref })); });
+    $('#target').value = S.settings.target; $('#groundTemp').value = S.settings.groundTemp;
+  }
+  function renderTab() {
+    destroyCharts();
+    $$('#tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === S.tab); });
+    ['overview', 'plots', 'boards', 'events', 'gps', 'explore'].forEach(function (t) { $('#tab-' + t).classList.toggle('hidden', t !== S.tab); });
+    var hasGps = S.sources.some(function (s) { return s.an.gps; });
+    $('#tabs [data-tab=gps]').classList.toggle('hidden', !hasGps);
+    var el = $('#tab-' + S.tab); el.innerHTML = '';
+    ({ overview: renderOverview, plots: renderPlots, boards: renderBoards, events: renderEvents, gps: renderGps, explore: renderExplore })[S.tab](el);
+  }
+  function rangeControl() {
+    var seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Time range' });
+    [['boost', 'Boost'], ['ascent', 'Ascent'], ['flight', 'Whole flight'], ['full', 'Full log']].forEach(function (r) {
+      seg.appendChild(h('button', { class: S.settings.range === r[0] ? 'on' : '', text: r[1], onclick: function () { S.settings.range = r[0]; renderTab(); } }));
+    });
+    return seg;
+  }
+  function toolbar(el, extras) {
+    var bar = h('div', { class: 'settings', style: 'margin-top:0' }, rangeControl(), extras || null, h('span', { class: 'hint', text: 'Drag on a chart to zoom · double-click to reset' }));
+    el.appendChild(bar);
+  }
+
+  /* ---------- Overview ---------- */
+  function metricRows() {
+    var gt = +S.settings.groundTemp;
+    return [
+      { k: 'Apogee (AGL)', u: 'm', d: 0, v: function (a) { return a.apogee; } },
+      { k: 'Time to apogee', u: 's', d: 2, v: function (a) { return a.tApo - a.tLift; } },
+      { k: 'Max velocity', u: 'm/s', d: 0, v: function (a) { return a.maxV; }, note: function (a) { return a.maxVName; } },
+      { k: 'Max Mach', u: '', d: 2, v: function (a) { return a.mach; } },
+      { k: 'Max velocity from pressure slope', u: 'm/s', d: 0, v: function (a) { return a.maxVBaro; } },
+      { k: 'Max acceleration (net)', u: 'g', d: 1, v: function (a) { return a.maxAcc / G; }, note: function (a) { return a.accName; } },
+      { k: 'Burnout', u: 's', d: 2, v: function (a) { return a.tBurn - a.tLift; }, pre: 'T+' },
+      { k: 'Drogue descent rate', u: 'm/s', d: 1, v: function (a) { return a.desc && (a.desc.drogueRate || a.desc.singleRate); } },
+      { k: 'Main canopy effective at', u: 's', d: 1, v: function (a) { return a.desc && a.desc.mainT - a.tLift; }, pre: 'T+' },
+      { k: 'Main canopy altitude', u: 'm', d: 0, v: function (a) { return a.desc && a.desc.mainAlt; } },
+      { k: 'Main descent rate', u: 'm/s', d: 1, v: function (a) { return a.desc && a.desc.mainRate; } },
+      { k: 'Flight time (to landing)', u: 's', d: 1, v: function (a) { return a.tLand - a.tLift; } },
+      { k: 'Landing drift (GPS)', u: 'm', d: 0, v: function (a) { return a.gps && a.gps.drift; } },
+      { k: 'Sample rate', u: 'Hz', d: 0, v: function (a) { return a.sampleRate; } }
+    ];
+  }
+  function spread(fn) {
+    var vals = flightSources().map(function (s) { return fn(s.an); }).filter(fin);
+    if (vals.length < 2) return null;
+    return [Math.min.apply(null, vals), Math.max.apply(null, vals), vals.length];
+  }
+  function renderOverview(el) {
+    var ref = refSource();
+    if (!ref || !ref.an.ok) { el.appendChild(h('div', { class: 'card empty-state', text: 'No flight was detected in the loaded files. Open “Columns” on a board to check the detected channels.' })); renderNotes(el); return; }
+    var a = ref.an, tiles = h('div', { class: 'tiles' });
+    function tile(k, v, unit, d, sub, hero, fn) {
+      var sp = fn ? spread(fn) : null;
+      var subTxt = sub || '';
+      if (sp && sp[1] - sp[0] > Math.pow(10, -d)) subTxt = (subTxt ? subTxt + ' · ' : '') + 'boards: ' + f(sp[0], d) + '–' + f(sp[1], d);
+      tiles.appendChild(h('div', { class: 'tile' + (hero ? ' hero' : '') }, h('div', { class: 'k', text: k }), h('div', { class: 'v', html: (fin(v) ? esc(f(v, d)) : '—') + (unit && fin(v) ? '<small>' + unit + '</small>' : '') }), subTxt ? h('div', { class: 's', html: subTxt }) : null));
+    }
+    var tgt = parseFloat(S.settings.target), apoSub = 'at ' + fT(a.tApo - a.tLift);
+    if (fin(tgt) && tgt > 0) { var dv = a.apogee - tgt; apoSub = '<span class="' + (Math.abs(dv) / tgt < 0.05 ? 'delta-pos' : 'delta-neg') + '">' + (dv >= 0 ? '+' : '−') + f(Math.abs(dv), 0) + ' m (' + (dv >= 0 ? '+' : '−') + f(Math.abs(dv / tgt * 100), 1) + ' %) vs target ' + f(tgt, 0) + ' m</span> · ' + apoSub; }
+    tile('Apogee · ' + ref.label, a.apogee, 'm', 0, apoSub, true, function (x) { return x.apogee; });
+    tile('Max velocity', a.maxV, 'm/s', 0, 'Mach ' + f(a.mach, 2) + ' at ' + fT(a.maxVT - a.tLift), false, function (x) { return x.maxV; });
+    tile('Max acceleration', a.maxAcc / G, 'g', 1, 'net, at ' + fT(a.maxAccT - a.tLift), false, function (x) { return x.maxAcc / G; });
+    tile('Burnout', a.tBurn - a.tLift, 's', 2, 'T+ · ' + (a.burnMethod || ''), false, function (x) { return x.tBurn - x.tLift; });
+    tile('Drogue descent', a.desc && (a.desc.drogueRate || a.desc.singleRate), 'm/s', 1, a.desc && a.desc.singleRate ? 'single-stage descent' : 'median, apogee → main', false, function (x) { return x.desc && (x.desc.drogueRate || x.desc.singleRate); });
+    tile('Main descent', a.desc && a.desc.mainRate, 'm/s', 1, a.desc && fin(a.desc.mainT) ? 'slows at ' + fT(a.desc.mainT - a.tLift) + ', ' + f(a.desc.mainAlt, 0) + ' m' : 'no main stage found', false, function (x) { return x.desc && x.desc.mainRate; });
+    tile('Flight time', a.tLand - a.tLift, 's', 1, a.landMethod ? 'landing: ' + a.landMethod : 'landing not in log', false, function (x) { return x.tLand - x.tLift; });
+    var gsrc = flightSources().find(function (s) { return s.an.gps && fin(s.an.gps.drift); });
+    if (gsrc) tile('Landing drift', gsrc.an.gps.drift, 'm', 0, f(gsrc.an.gps.bearing, 0) + '° from pad · ' + esc(gsrc.label));
+    el.appendChild(tiles);
+
+    var grid = h('div', { class: 'grid2' }); el.appendChild(grid);
+    chartCard(grid, 'Altitude', 'all boards · AGL', function (card) {
+      return makeChart(card, { unit: 'm', series: altSeries(), range: currentRangeFor('flight'), events: eventMarkers({ logged: false }), height: 280, syncKey: 'ov' });
+    });
+    chartCard(grid, 'Vertical velocity', 'all boards', function (card) {
+      return makeChart(card, { unit: 'm/s', series: velSeries(false), range: currentRangeFor('flight'), events: eventMarkers({ logged: false }), height: 280, syncKey: 'ov' });
+    });
+
+    // comparison table
+    var fs = flightSources(), tbl = h('table', { class: 't' });
+    tbl.appendChild(h('thead', null, h('tr', null, h('th', { text: 'Metric' }), fs.map(function (s) { return h('th', { class: 'n' }, h('span', { class: 'swatch', style: 'display:inline-block;margin:0 5px 0 0;vertical-align:0;background:' + seriesColor(s.slot) }), s.label); }))));
+    var tb = h('tbody'); tbl.appendChild(tb);
+    metricRows().forEach(function (m) {
+      var vals = fs.map(function (s) { return m.v(s.an); });
+      if (!vals.some(fin)) return;
+      tb.appendChild(h('tr', null, h('td', { text: m.k }), vals.map(function (v, i) {
+        var note = m.note ? m.note(fs[i].an) : null;
+        return h('td', { class: 'n', title: note ? 'from ' + note : '' }, fin(v) ? (m.pre || '') + f(v, m.d) + (m.u ? ' ' + m.u : '') : h('span', { class: 'dim', text: '—' }));
+      })));
+    });
+    var card = h('div', { class: 'card', style: 'margin-top:16px' }, h('h3', null, 'Board comparison', h('span', { class: 'sub', text: 'every value is computed independently from each board’s own data' })), h('div', { style: 'overflow-x:auto' }, tbl));
+    el.appendChild(card);
+    renderNotes(el);
+  }
+  function renderNotes(el) {
+    var notes = [];
+    S.sources.forEach(function (s) { (s.an.notes || []).forEach(function (n) { notes.push({ s: s, n: n }); }); });
+    // cross-board checks
+    var fs = flightSources().filter(function (s) { return fin(s.an.apogee); });
+    if (fs.length > 1) {
+      var ap = fs.map(function (s) { return s.an.apogee; }), mn = Math.min.apply(null, ap), mx = Math.max.apply(null, ap);
+      notes.unshift({ s: null, n: { level: (mx - mn) / mx > 0.03 ? 'warn' : 'info', text: 'Apogee agrees within ' + f(mx - mn, 0) + ' m (' + f((mx - mn) / mx * 100, 1) + ' %) across ' + fs.length + ' boards.' } });
+    }
+    var card = h('div', { class: 'card' }, h('h3', null, 'Findings & data quality', h('span', { class: 'sub', text: notes.length + ' items' })));
+    var list = h('div', { class: 'notes' });
+    if (!notes.length) list.appendChild(h('div', { class: 'dim', text: 'No issues found.' }));
+    notes.forEach(function (x) {
+      list.appendChild(h('div', { class: 'note ' + x.n.level }, h('span', { class: 'ico', text: x.n.level === 'warn' ? '!' : 'i', 'aria-label': x.n.level === 'warn' ? 'Warning' : 'Info' }), h('div', null, x.s ? h('span', { class: 'who', text: x.s.label + ':' }) : null, x.n.text)));
+    });
+    card.appendChild(list); el.appendChild(card);
+  }
+  function currentRangeFor(name) { var old = S.settings.range; S.settings.range = name; var r = currentRange(); S.settings.range = old; return r; }
+
+  function tpArray(s) { var L = lift(s), t = s.ch.t, o = new Float64Array(t.length); for (var i = 0; i < t.length; i++) o[i] = t[i] - L; return o; }
+  function cachedTp(s) { var L = lift(s); if (!s._tp || s._tpL !== L) { s._tp = tpArray(s); s._tpL = L; } return s._tp; }
+  function altSeries() {
+    var out = [];
+    flightSources().forEach(function (s) {
+      var a = s.an; if (!a.series.alt) return;
+      var y = new Float64Array(a.series.alt.length); for (var i = 0; i < y.length; i++) y[i] = a.series.alt[i] - a.ground;
+      out.push({ label: s.label, color: seriesColor(s.slot), x: cachedTp(s), y: y });
+    });
+    return out;
+  }
+  function velSeries(derived) {
+    var out = [];
+    flightSources().forEach(function (s) {
+      var a = s.an;
+      if (a.series.v) out.push({ label: s.label + (s.ch.byRole.velocity ? '' : ' (pressure slope)'), color: seriesColor(s.slot), x: cachedTp(s), y: a.series.v });
+      if (derived && s.ch.byRole.velocity && a.series.vBaro) out.push({ label: s.label + ' · pressure slope', color: seriesColor(s.slot), x: cachedTp(s), y: a.series.vBaro, dash: [4, 4], width: 1.2 });
+      if (derived && a.series.vAcc) out.push({ label: s.label + ' · integrated accel', color: seriesColor(s.slot), x: cachedTp(s), y: a.series.vAcc, dash: [1, 3], width: 1.4 });
+    });
+    return out;
+  }
+  function accSeries() {
+    var out = [];
+    flightSources().forEach(function (s) {
+      var a = s.an; if (!a.series.thr) return;
+      var y = new Float64Array(a.series.thr.length); for (var i = 0; i < y.length; i++) y[i] = (a.series.thr[i] - G) / G;
+      out.push({ label: s.label + ' · ' + a.accName, color: seriesColor(s.slot), x: cachedTp(s), y: y });
+    });
+    return out;
+  }
+  function roleSeries(role, transform) {
+    var out = [];
+    S.sources.forEach(function (s) {
+      if (lift(s) == null) return;
+      (s.ch.byRole[role] || []).forEach(function (c) { if (c.y) out.push({ label: s.label + ' · ' + c.name, color: seriesColor(s.slot), x: cachedTp(s), y: transform ? transform(c.y) : c.y }); });
+    });
+    // distinguish multiple series from the same board with dashes
+    var seen = {}; out.forEach(function (o) { var k = o.color; if (seen[k]) o.dash = [[4, 3], [1, 3], [8, 3]][(seen[k] - 1) % 3]; seen[k] = (seen[k] || 0) + 1; });
+    return out;
+  }
+
+  /* ---------- Flight plots ---------- */
+  function renderPlots(el) {
+    var cb = h('label', { style: 'display:inline-flex;gap:6px;align-items:center' }, h('input', { type: 'checkbox', checked: S.settings.showLogged, onchange: function (e) { S.settings.showLogged = e.target.checked; renderTab(); } }), 'Show logged events');
+    var cb2 = h('label', { style: 'display:inline-flex;gap:6px;align-items:center' }, h('input', { type: 'checkbox', checked: S.settings.showDerived, onchange: function (e) { S.settings.showDerived = e.target.checked; renderTab(); } }), 'Show independent velocity estimates');
+    toolbar(el, [cb, cb2]);
+    var r = currentRange(), ev = eventMarkers();
+    chartCard(el, 'Altitude above ground', 'per board, zeroed on the pad', function (c) { return makeChart(c, { unit: 'm', series: altSeries(), range: r, events: ev, syncKey: 'fp', height: 300 }); });
+    chartCard(el, 'Vertical velocity', S.settings.showDerived ? 'solid: logged · dashed: pressure slope · dotted: integrated acceleration' : 'logged estimate, or pressure slope if the board logs none', function (c) { return makeChart(c, { unit: 'm/s', series: velSeries(S.settings.showDerived), range: r, events: ev, syncKey: 'fp', height: 280 }); });
+    var acc = accSeries();
+    if (acc.length) chartCard(el, 'Net vertical acceleration', 'gravity removed, in g', function (c) { return makeChart(c, { unit: 'g', series: acc, range: r, events: ev, syncKey: 'fp', height: 260 }); });
+    var pr = roleSeries('pressure', function (y) { var o = new Float64Array(y.length); for (var i = 0; i < y.length; i++) o[i] = y[i] / 100; return o; });
+    if (pr.length) chartCard(el, 'Static pressure', 'hPa', function (c) { return makeChart(c, { unit: 'hPa', series: pr, range: r, events: ev, syncKey: 'fp', height: 220 }); });
+  }
+
+  /* ---------- Board sensors ---------- */
+  function renderBoards(el) {
+    toolbar(el);
+    var r = currentRange(), ev = eventMarkers({ logged: false });
+    S.sources.forEach(function (s) {
+      if (lift(s) == null) return;
+      var x = cachedTp(s), ch = s.ch;
+      var head = h('h2', { style: 'font-size:16px;margin:22px 0 10px;display:flex;align-items:center;gap:8px' }, h('span', { class: 'swatch', style: 'margin:0;background:' + seriesColor(s.slot) }), s.label);
+      el.appendChild(head);
+      var grid = h('div', { class: 'grid2' }); el.appendChild(grid);
+      var any = false;
+      function group(title, roles, unit, opts) {
+        opts = opts || {};
+        var ser = [];
+        roles.forEach(function (role) { (ch.byRole[role] || []).forEach(function (c) { if (c.y) ser.push({ label: c.name, x: x, y: opts.tf ? opts.tf(c.y) : c.y, step: opts.step }); }); });
+        if (!ser.length) return;
+        ser.forEach(function (o, i) { o.color = seriesColor(i); });
+        any = true;
+        chartCard(grid, title, opts.sub || '', function (c) { return makeChart(c, { unit: unit, series: ser, range: r, events: ev, syncKey: 'b' + s.id, height: 220 }); });
+      }
+      var gtf = function (y) { var o = new Float64Array(y.length); for (var i = 0; i < y.length; i++) o[i] = y[i] / G; return o; };
+      group('Body acceleration', ['accel_x', 'accel_y', 'accel_z'], 'g', { tf: gtf, sub: 'raw axes incl. gravity' });
+      group('Vertical / earth-frame acceleration', ['accel_vertical', 'accel_h'], 'g', { tf: gtf });
+      group('Rotation rate', ['gyro_x', 'gyro_y', 'gyro_z'], '°/s');
+      group('Orientation quaternion', ['quat'], '');
+      group('Horizontal velocity', ['velocity_h'], 'm/s');
+      group('Temperature', ['temperature'], '°C', { sub: 'board sensors — usually not ambient' });
+      group('Humidity', ['humidity'], '%');
+      group('Battery', ['voltage'], 'V');
+      group('Flight state', ['state'], '', { step: true });
+      group('Pyro & output channels', ['output'], '', { step: true });
+      group('Control / airbrake command', ['control'], '', { step: true });
+      group('Status flags', ['flag'], '', { step: true });
+      group('GPS satellites', ['sats'], '', { step: true });
+      group('Other channels', ['other'], '');
+      if (!any) grid.appendChild(h('div', { class: 'card dim', text: 'No extra sensor channels on this board.' }));
+    });
+  }
+
+  /* ---------- Events ---------- */
+  function renderEvents(el) {
+    var hidePad = S.settings.hidePad !== false;
+    var cb = h('label', { style: 'display:inline-flex;gap:6px;align-items:center' }, h('input', { type: 'checkbox', checked: hidePad, onchange: function (e) { S.settings.hidePad = e.target.checked; renderTab(); } }), 'Hide events more than 60 s before liftoff');
+    el.appendChild(h('div', { class: 'settings', style: 'margin-top:0' }, cb, h('span', { class: 'hint', text: 'Detected = computed from sensor data · Logged = written by the flight computer' })));
+    var tbl = h('table', { class: 't' }, h('thead', null, h('tr', null, h('th', { class: 'n', text: 'T+' }), h('th', { text: 'Board' }), h('th', { text: 'Event' }), h('th', { text: 'Source' }), h('th', { class: 'n', text: 'Altitude' }), h('th', { class: 'n', text: 'Velocity' }))));
+    var tb = h('tbody'); tbl.appendChild(tb);
+    allEvents().forEach(function (e) {
+      if (hidePad && fin(e.t) && e.t < -60) return;
+      var s = e.src, base = s.syncTo || s, alt = NaN, vel = NaN;
+      if (base.an.ok && fin(e.t) && base.an.series.alt) {
+        var tt = e.t + lift(base);
+        alt = RL.valueAt(base.ch.t, base.an.series.altS || base.an.series.alt, tt) - base.an.ground;
+        if (base.an.series.v) vel = RL.valueAt(base.ch.t, base.an.series.v, tt);
+      }
+      tb.appendChild(h('tr', null,
+        h('td', { class: 'n', text: fin(e.t) ? (e.t >= 0 ? '+' : '−') + Math.abs(e.t).toFixed(2) : '—' }),
+        h('td', null, h('span', { class: 'swatch', style: 'display:inline-block;margin:0 6px 0 0;vertical-align:0;background:' + seriesColor(s.slot) }), s.label),
+        h('td', { text: e.label, title: e.how ? 'method: ' + e.how : '' }),
+        h('td', null, h('span', { class: 'tag', text: e.kind === 'detected' ? 'detected' : 'logged' })),
+        h('td', { class: 'n', text: f(alt, 0, 'm') }), h('td', { class: 'n', text: f(vel, 1, 'm/s') })));
+    });
+    el.appendChild(h('div', { class: 'card' }, h('div', { class: 'scroll' }, tbl)));
+  }
+
+  /* ---------- GPS ---------- */
+  function renderGps(el) {
+    S.sources.filter(function (s) { return s.an.gps; }).forEach(function (s) {
+      var g = s.an.gps, L = lift(s);
+      var card = h('div', { class: 'card' }, h('h3', null, h('span', { class: 'swatch', style: 'margin:0;background:' + seriesColor(s.slot) }), 'Ground track · ' + s.label, h('span', { class: 'sub', text: 'valid fixes only (≥4 satellites), from 30 s before liftoff to the first fix after landing' })));
+      var cv = h('canvas', { class: 'track', role: 'img', 'aria-label': 'GPS ground track' });
+      card.appendChild(h('div', { class: 'track-wrap' }, cv));
+      var info = h('div', { class: 'tiles', style: 'margin:12px 0 0' }); card.appendChild(info);
+      function t(k, v, s2) { info.appendChild(h('div', { class: 'tile' }, h('div', { class: 'k', text: k }), h('div', { class: 'v', style: 'font-size:18px', html: v }), s2 ? h('div', { class: 's', html: s2 }) : null)); }
+      if (g.pad) t('Pad', g.pad[0].toFixed(6) + ', ' + g.pad[1].toFixed(6), '<a href="https://www.google.com/maps?q=' + g.pad[0] + ',' + g.pad[1] + '" target="_blank" rel="noopener">Open in Google Maps</a>');
+      if (g.landing) t('Landing (first fix after touchdown)', g.landing[0].toFixed(6) + ', ' + g.landing[1].toFixed(6), 'fix at ' + fT(g.landingFixT - L) + ' · <a href="https://www.google.com/maps?q=' + g.landing[0] + ',' + g.landing[1] + '" target="_blank" rel="noopener">Open in Google Maps</a>');
+      if (fin(g.drift)) t('Drift', f(g.drift, 0) + '<small> m</small>', 'bearing ' + f(g.bearing, 0) + '° from the pad');
+      if (g.outage) t('Longest fix outage', fT(g.outage.from - L), fin(g.outage.to) ? 'until ' + fT(g.outage.to - L) : 'until end of log');
+      el.appendChild(card);
+      requestAnimationFrame(function () { drawTrack(cv, s); });
+    });
+  }
+  function drawTrack(cv, s) {
+    var g = s.an.gps, L = lift(s), t = s.ch.t, dpr = devicePixelRatio || 1;
+    var W = cv.clientWidth, H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr;
+    var ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+    var a = RL.idxAtTime(t, L - 30), b = g.landingFixT ? RL.idxAtTime(t, g.landingFixT) : t.length - 1;
+    var pts = [];
+    var la0 = g.pad ? g.pad[0] : null, lo0 = g.pad ? g.pad[1] : null;
+    for (var i = a; i <= b; i++) if (g.valid[i]) { if (la0 == null) { la0 = g.lat[i]; lo0 = g.lon[i]; } pts.push({ t: t[i] - L, x: (g.lon[i] - lo0) * 111320 * Math.cos(la0 * Math.PI / 180), y: (g.lat[i] - la0) * 110540 }); }
+    ctx.fillStyle = cssVar('--text-muted'); ctx.font = '12px ' + cssVar('--sans');
+    if (!pts.length) { ctx.fillText('No valid GPS fixes in this window.', 16, 24); return; }
+    var mnx = 0, mxx = 0, mny = 0, mxy = 0;
+    pts.forEach(function (p) { mnx = Math.min(mnx, p.x); mxx = Math.max(mxx, p.x); mny = Math.min(mny, p.y); mxy = Math.max(mxy, p.y); });
+    var span = Math.max(mxx - mnx, mxy - mny, 50) * 1.2, sc = Math.min(W, H) / span, cx = W / 2 - (mnx + mxx) / 2 * sc, cy = H / 2 + (mny + mxy) / 2 * sc;
+    function X(p) { return cx + p.x * sc; } function Y(p) { return cy - p.y * sc; }
+    // grid rings every nice distance
+    var step = [50, 100, 200, 250, 500, 1000, 2000, 5000].find(function (s2) { return span / s2 < 8; }) || 10000;
+    ctx.strokeStyle = cssVar('--grid'); ctx.lineWidth = 1;
+    for (var rr = step; rr < span * 1.5; rr += step) { ctx.beginPath(); ctx.arc(cx, cy, rr * sc, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.fillStyle = cssVar('--text-muted'); ctx.fillText('rings every ' + step + ' m · north up', 12, H - 12);
+    var col = seriesColor(s.slot);
+    ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath();
+    pts.forEach(function (p, i) { if (i && Math.abs(p.t - pts[i - 1].t) > 5) { ctx.stroke(); ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(X(pts[i - 1]), Y(pts[i - 1])); ctx.lineTo(X(p), Y(p)); ctx.stroke(); ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(X(p), Y(p)); } else if (i) ctx.lineTo(X(p), Y(p)); else ctx.moveTo(X(p), Y(p)); });
+    ctx.stroke();
+    function mark(p, label, fill) { ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(X(p), Y(p), 5, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = cssVar('--surface-2'); ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = cssVar('--text-primary'); ctx.fillText(label, X(p) + 8, Y(p) - 8); }
+    mark({ x: 0, y: 0 }, 'Pad', cssVar('--text-primary'));
+    if (g.landing) { var lp = { x: (g.landing[1] - lo0) * 111320 * Math.cos(la0 * Math.PI / 180), y: (g.landing[0] - la0) * 110540 }; mark(lp, 'Landing · ' + f(g.drift, 0) + ' m', col); }
+    ctx.fillStyle = cssVar('--text-muted'); ctx.fillText('dashed = no fix in between', W - 170, H - 12);
+  }
+
+  /* ---------- Explorer ---------- */
+  function renderExplore(el) {
+    toolbar(el);
+    var card = h('div', { class: 'card' }, h('h3', null, 'Pick channels to plot', h('span', { class: 'sub', text: 'channels with different units get separate charts' })));
+    var picker = h('div', { class: 'picker' });
+    S.sources.forEach(function (s) {
+      if (lift(s) == null) return;
+      s.ch.list.forEach(function (c) {
+        if (!c.y) return;
+        var key = s.key + '::' + c.name, on = !!S.explorerSel[key];
+        picker.appendChild(h('span', { class: 'pick' + (on ? ' on' : ''), role: 'checkbox', 'aria-checked': on ? 'true' : 'false', tabindex: '0', onclick: function () { if (S.explorerSel[key]) delete S.explorerSel[key]; else S.explorerSel[key] = 1; renderTab(); } },
+          h('span', { class: 'sw', style: 'background:' + seriesColor(s.slot) }), s.label + ' · ' + c.name, h('span', { class: 'dim', text: ' ' + (RL.ROLES[c.role] ? RL.ROLES[c.role].label : c.role) })));
+      });
+    });
+    card.appendChild(picker); el.appendChild(card);
+    var groups = {}, r = currentRange();
+    Object.keys(S.explorerSel).forEach(function (key) {
+      var p = key.split('::'), s = S.sources.find(function (x) { return x.key === p[0]; }); if (!s) return;
+      var c = s.ch.list.find(function (x) { return x.name === p[1]; }); if (!c || !c.y) return;
+      var u = c.unit || '(no unit)'; (groups[u] = groups[u] || []).push({ label: s.label + ' · ' + c.name, x: cachedTp(s), y: c.y, slot: s.slot });
+    });
+    Object.keys(groups).forEach(function (u) {
+      var ser = groups[u]; ser.forEach(function (o, i) { o.color = seriesColor(ser.length > 1 && ser.every(function (q) { return q.slot === ser[0].slot; }) ? i : o.slot); });
+      var seen = {}; ser.forEach(function (o) { if (seen[o.color]) o.dash = [4, 3]; seen[o.color] = 1; });
+      chartCard(el, u === '(no unit)' ? 'Unitless channels' : 'Channels in ' + u, '', function (c) { return makeChart(c, { unit: u === '(no unit)' ? '' : u, series: ser, range: r, events: eventMarkers({ logged: false }), syncKey: 'ex', height: 280 }); });
+    });
+    if (!Object.keys(groups).length) el.appendChild(h('div', { class: 'card empty-state', text: 'Select one or more channels above.' }));
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Column mapping editor                                               */
+  /* ------------------------------------------------------------------ */
+  function openMapping(src) {
+    var back = h('div', { class: 'modal-back', onclick: function (e) { if (e.target === back) back.remove(); } });
+    var content = h('div', { class: 'content' });
+    var edits = {};
+    src.files.forEach(function (fl) {
+      edits[fl.id] = {};
+      content.appendChild(h('h4', { style: 'margin:8px 0', text: fl.name + ' · ' + fl.table.rows.toLocaleString() + ' rows' }));
+      var tbl = h('table', { class: 't' }, h('thead', null, h('tr', null, h('th', { text: 'Column' }), h('th', { text: 'Range in file' }), h('th', { text: 'Detected as' }), h('th', { text: 'Unit' }), h('th', { text: 'Extra' }), h('th', { text: 'Why' }))));
+      var tb = h('tbody'); tbl.appendChild(tb);
+      fl.table.columns.forEach(function (c) {
+        var m = Object.assign({}, fl.mapping[c.name]); edits[fl.id][c.name] = m;
+        var st = c.data ? (c.stats || RL.stats(c.data)) : null;
+        var rangeTxt = st ? (fmtNum(st.min) + ' … ' + fmtNum(st.max)) : 'text: ' + (c.text.find(function (x) { return x; }) || '').slice(0, 24);
+        var unitSel = h('select');
+        function fillUnits() { unitSel.innerHTML = ''; (RL.ROLES[m.role] || { units: [''] }).units.forEach(function (u) { unitSel.appendChild(h('option', { value: u, text: u || '—', selected: u === m.unit })); }); if ((RL.ROLES[m.role] || { units: [''] }).units.indexOf(m.unit) < 0) m.unit = unitSel.value; }
+        var roleSel = h('select', { onchange: function (e) { m.role = e.target.value; fillUnits(); fillExtra(); } });
+        Object.keys(RL.ROLES).forEach(function (r) { roleSel.appendChild(h('option', { value: r, text: RL.ROLES[r].label, selected: r === m.role })); });
+        unitSel.addEventListener('change', function (e) { m.unit = e.target.value; });
+        fillUnits();
+        var extra = h('div');
+        function fillExtra() {
+          extra.innerHTML = '';
+          if (/^accel/.test(m.role)) {
+            var gs = h('select', { onchange: function (e) { m.gravity = e.target.value; }, title: 'Does this channel read +1 g when the rocket sits on the pad?' });
+            [['included', 'incl. gravity'], ['removed', 'gravity removed']].forEach(function (o) { gs.appendChild(h('option', { value: o[0], text: o[1], selected: m.gravity === o[0] })); });
+            extra.appendChild(gs);
+          }
+          if (m.role === 'state') {
+            var cur = fl.stateNames[c.name] || {}, txt = Object.keys(cur).map(function (k) { return k + '=' + cur[k]; }).join(', ');
+            var vals = st && st.uniqVals ? st.uniqVals.join(', ') : '';
+            extra.appendChild(h('input', { style: 'width:220px', placeholder: 'names, e.g. 1=Pad, 3=Boost (values: ' + vals + ')', value: txt, onchange: function (e) { m._stateNames = e.target.value; } }));
+          }
+        }
+        fillExtra();
+        tb.appendChild(h('tr', null, h('td', { class: 'mono', text: c.name }), h('td', { class: 'mono dim', style: 'font-size:12px', text: rangeTxt }), h('td', null, roleSel), h('td', null, unitSel), h('td', null, extra), h('td', null, h('span', { class: 'conf ' + (m.conf || 'low'), text: m.conf || 'low' }), ' ', h('span', { class: 'dim', style: 'font-size:12px', text: m.reason || '' }))));
+      });
+      content.appendChild(h('div', { style: 'overflow-x:auto' }, tbl));
+    });
+    function apply(remember) {
+      src.files.forEach(function (fl) {
+        var e = edits[fl.id];
+        Object.keys(e).forEach(function (k) {
+          var m = e[k];
+          if (m._stateNames !== undefined) {
+            var o = {}; m._stateNames.split(/[,;]/).forEach(function (p) { var q = p.split('='); if (q.length === 2 && q[0].trim() !== '') o[+q[0].trim()] = q[1].trim(); });
+            fl.stateNames[k] = o; delete m._stateNames;
+          }
+          fl.mapping[k] = m;
+        });
+        if (remember) {
+          var ps = profiles(), pm = {};
+          Object.keys(fl.mapping).forEach(function (k) { pm[k] = { role: fl.mapping[k].role, unit: fl.mapping[k].unit, gravity: fl.mapping[k].gravity }; });
+          ps[headerSig(fl.table)] = { name: fl.name, label: src.label, mapping: pm, stateNames: fl.stateNames, saved: new Date().toISOString() };
+          store.set('profiles', ps);
+        }
+      });
+      back.remove(); rebuild();
+      if (remember) toast('Saved — files with the same columns will load with this setup.');
+    }
+    back.appendChild(h('div', { class: 'modal', role: 'dialog', 'aria-label': 'Column mapping' },
+      h('header', null, h('h2', { text: 'Columns · ' + src.label }), h('button', { class: 'btn ghost small', text: '✕', onclick: function () { back.remove(); } })),
+      content,
+      h('footer', null, h('span', { class: 'hint', style: 'margin-right:auto', text: 'Fix any wrong guesses; analysis re-runs instantly.' }),
+        h('button', { class: 'btn', text: 'Cancel', onclick: function () { back.remove(); } }),
+        h('button', { class: 'btn', text: 'Apply', onclick: function () { apply(false); } }),
+        h('button', { class: 'btn primary', text: 'Apply & remember this layout', onclick: function () { apply(true); } }))));
+    document.body.appendChild(back);
+  }
+  function fmtNum(v) { if (!fin(v)) return '—'; var a = Math.abs(v); return a >= 1e6 || (a < 0.01 && a > 0) ? v.toExponential(2) : a >= 100 ? v.toFixed(0) : v.toFixed(2); }
+
+  function openProfiles() {
+    var ps = profiles(), keys = Object.keys(ps);
+    var back = h('div', { class: 'modal-back', onclick: function (e) { if (e.target === back) back.remove(); } });
+    var ta = h('textarea', { style: 'width:100%;height:160px;font-family:var(--mono);font-size:12px', placeholder: 'Paste a profiles JSON here to import' });
+    ta.value = keys.length ? JSON.stringify(ps, null, 1) : '';
+    var list = h('div');
+    if (!keys.length) list.appendChild(h('p', { class: 'dim', text: 'No saved profiles yet. Open “Columns” on a board and choose “Apply & remember this layout”.' }));
+    keys.forEach(function (k) { list.appendChild(h('div', { class: 'note info', style: 'margin-bottom:6px' }, h('div', { style: 'flex:1' }, h('b', { text: ps[k].label || ps[k].name }), h('div', { class: 'dim', style: 'font-size:12px', text: k.split('|').length + ' columns · from ' + ps[k].name })), h('button', { class: 'btn ghost small', text: 'Delete', onclick: function () { delete ps[k]; store.set('profiles', ps); back.remove(); openProfiles(); } }))); });
+    back.appendChild(h('div', { class: 'modal', style: 'width:min(720px,100%)' },
+      h('header', null, h('h2', { text: 'Board profiles' }), h('button', { class: 'btn ghost small', text: '✕', onclick: function () { back.remove(); } })),
+      h('div', { class: 'content' }, h('p', { class: 'dim', style: 'margin-top:0', text: 'A profile remembers your column corrections and state names for one file layout. Profiles live in this browser — copy the JSON to share them with your team.' }), list, ta),
+      h('footer', null,
+        h('button', { class: 'btn', text: 'Copy JSON', onclick: function () { navigator.clipboard.writeText(ta.value).then(function () { toast('Copied'); }, function () { ta.select(); toast('Select-all done — press Ctrl+C'); }); } }),
+        h('button', { class: 'btn primary', text: 'Import pasted JSON', onclick: function () { try { var o = JSON.parse(ta.value); store.set('profiles', Object.assign(profiles(), o)); toast('Imported ' + Object.keys(o).length + ' profiles'); back.remove(); } catch (e) { toast('That is not valid JSON'); } } }))));
+    document.body.appendChild(back);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Export                                                              */
+  /* ------------------------------------------------------------------ */
+  var downloadsCap = null, sampleCap = null;
+  function summaryCSV() {
+    var fs = flightSources(), rows = [['Metric', 'Unit'].concat(fs.map(function (s) { return s.label; }))];
+    metricRows().forEach(function (m) { rows.push([m.k, m.u].concat(fs.map(function (s) { var v = m.v(s.an); return fin(v) ? v.toFixed(m.d) : ''; }))); });
+    rows.push([]); rows.push(['Events']); rows.push(['T+ (s)', 'Board', 'Event', 'Type']);
+    allEvents().forEach(function (e) { if (fin(e.t) && e.t > -60) rows.push([e.t.toFixed(2), e.src.label, e.label, e.kind]); });
+    rows.push([]); rows.push(['Findings']);
+    S.sources.forEach(function (s) { (s.an.notes || []).forEach(function (n) { rows.push([s.label, n.text]); }); });
+    return rows.map(function (r) { return r.map(function (c) { c = String(c == null ? '' : c); return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(','); }).join('\n');
+  }
+  function fileBase() { return ($('#launchName').value || 'flight').replace(/[^\w\-]+/g, '_').slice(0, 60); }
+  async function exportSummary() {
+    var csv = summaryCSV();
+    if (downloadsCap) {
+      try { await downloadsCap.save({ filename: fileBase() + '_summary.csv', data: new Blob([csv], { type: 'text/csv' }) }); return; } catch (e) { if (e && e.code === 'cancelled') return; }
+    }
+    try { await navigator.clipboard.writeText(csv); toast('Summary copied to the clipboard as CSV'); } catch (e) { toast('Could not export here'); }
+  }
+  function downloadCanvas(u, title) {
+    if (!downloadsCap) return;
+    var src = u.ctx.canvas, c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+    var x = c.getContext('2d'); x.fillStyle = cssVar('--surface-1'); x.fillRect(0, 0, c.width, c.height); x.drawImage(src, 0, 0);
+    c.toBlob(function (b) { downloadsCap.save({ filename: fileBase() + '_' + title.replace(/[^\w]+/g, '_') + '.png', data: b }).catch(function () { }); }, 'image/png');
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Claude assistant                                                    */
+  /* ------------------------------------------------------------------ */
+  var chat = { history: [], busy: false, abort: null };
+  function findChannel(source, channel) {
+    var s = S.sources.find(function (x) { return x.label.toLowerCase() === String(source).toLowerCase(); }) || S.sources.find(function (x) { return x.label.toLowerCase().indexOf(String(source).toLowerCase()) >= 0; });
+    if (!s) throw new Error('Unknown board "' + source + '". Boards: ' + S.sources.map(function (x) { return x.label; }).join(', '));
+    var special = { altitude_agl: function () { var a = s.an.series.alt; if (!a) return null; var o = new Float64Array(a.length); for (var i = 0; i < a.length; i++) o[i] = a[i] - s.an.ground; return { y: o, unit: 'm' }; }, velocity: function () { return s.an.series.v ? { y: s.an.series.v, unit: 'm/s' } : null; }, net_accel_g: function () { var a = s.an.series.thr; if (!a) return null; var o = new Float64Array(a.length); for (var i = 0; i < a.length; i++) o[i] = (a[i] - G) / G; return { y: o, unit: 'g' }; } };
+    if (special[channel]) { var r = special[channel](); if (!r) throw new Error('Board has no ' + channel); return { s: s, y: r.y, unit: r.unit, name: channel }; }
+    var c = s.ch.list.find(function (x) { return x.name === channel; }) || s.ch.list.find(function (x) { return x.name.toLowerCase() === String(channel).toLowerCase(); });
+    if (!c || !c.y) throw new Error('Unknown channel "' + channel + '" on ' + s.label + '. Use list_channels.');
+    return { s: s, y: c.y, unit: c.unit, name: c.name };
+  }
+  function contextSummary() {
+    var o = { launch: $('#launchName').value || null, target_apogee_m: parseFloat(S.settings.target) || null, ground_temp_c: +S.settings.groundTemp, reference_board: refSource() ? refSource().label : null, boards: [] };
+    S.sources.forEach(function (s) {
+      var a = s.an, L = lift(s), b = { name: s.label, files: s.files.map(function (x) { return x.name; }), type: s.kind, rows: s.table.rows, sample_rate_hz: a.sampleRate ? +a.sampleRate.toFixed(1) : null };
+      if (s.syncTo) b.synced_to = s.syncTo.label;
+      if (a.ok) {
+        var r = function (x, d) { return fin(x) ? +x.toFixed(d) : null; };
+        b.metrics = { liftoff_method: a.liftMethod, apogee_m_agl: r(a.apogee, 1), t_apogee: r(a.tApo - L, 2), max_velocity_mps: r(a.maxV, 1), max_velocity_source: a.maxVName, t_max_velocity: r(a.maxVT - L, 2), max_velocity_from_pressure_slope_mps: r(a.maxVBaro, 1), mach: r(a.mach, 3), max_net_accel_g: r(a.maxAcc / G, 2), accel_source: a.accName, t_burnout: r(a.tBurn - L, 2), burnout_method: a.burnMethod, drogue_rate_mps: a.desc ? r(a.desc.drogueRate || a.desc.singleRate, 1) : null, main_canopy_effective_t: a.desc ? r(a.desc.mainT - L, 1) : null, main_canopy_alt_m: a.desc ? r(a.desc.mainAlt, 0) : null, main_rate_mps: a.desc ? r(a.desc.mainRate, 1) : null, t_landing: r(a.tLand - L, 1), landing_method: a.landMethod, pad_pressure_pa: r(a.padPressure, 0) };
+        if (a.gps) b.gps = { pad: a.gps.pad, landing: a.gps.landing, drift_m: r(a.gps.drift, 0), bearing_deg: r(a.gps.bearing, 0) };
+        b.findings = a.notes.map(function (n) { return n.text; });
+      }
+      b.channels = s.ch.list.filter(function (c) { return c.y; }).map(function (c) { return c.name + ' [' + c.role + (c.unit ? ', ' + c.unit : '') + ']'; });
+      o.boards.push(b);
+    });
+    o.events = allEvents().filter(function (e) { return fin(e.t) && e.t > -60; }).slice(0, 120).map(function (e) { return { t: +e.t.toFixed(2), board: e.src.label, event: e.label, type: e.kind }; });
+    return o;
+  }
+  var SYSTEM = 'You are the flight-data analyst built into "Flight Log Lab", a web app a student rocketry team uses to analyse launch logs (e.g. EuRoC). ' +
+    'Below is the current analysis the app computed (JSON). Times are T+ seconds from each board\'s detected liftoff; altitudes are metres above the pad. ' +
+    'Use the tools to read exact values instead of guessing — never invent numbers. Channel names are as listed; special channels available on every flight board: altitude_agl, velocity, net_accel_g. ' +
+    'When a plot would help, call plot_channels (it draws in the chat). Explain physics plainly (burnout, drag, Mach, recovery, airbrakes, sensor saturation, Kalman bias). ' +
+    'Be concise: short paragraphs or bullets, markdown allowed, cite board names and T+ times. If data cannot answer the question, say so and suggest what to log next time.';
+  var TOOLS = [
+    { name: 'list_channels', description: 'List boards and all their channels with role, unit and min/max over the flight window.', inputSchema: { type: 'object', properties: {} }, execute: function () {
+      return S.sources.map(function (s) { var L = lift(s); var a = L == null ? 0 : RL.idxAtTime(s.ch.t, L - 5), b = L == null ? s.ch.t.length - 1 : RL.idxAtTime(s.ch.t, (fin(s.an.tLand) ? s.an.tLand : L + 300) + 5); return { board: s.label, aligned: L != null, channels: s.ch.list.filter(function (c) { return c.y; }).map(function (c) { var mn = Infinity, mx = -Infinity; for (var i = a; i <= b; i++) { var v = c.y[i]; if (fin(v)) { if (v < mn) mn = v; if (v > mx) mx = v; } } return { name: c.name, role: c.role, unit: c.unit, min: fin(mn) ? +mn.toPrecision(5) : null, max: fin(mx) ? +mx.toPrecision(5) : null }; }) }; });
+    } },
+    { name: 'get_series', description: 'Get time series samples of one channel between two T+ times, downsampled to at most `points` samples (default 60, max 300).', inputSchema: { type: 'object', properties: { board: { type: 'string' }, channel: { type: 'string' }, t_from: { type: 'number' }, t_to: { type: 'number' }, points: { type: 'number' } }, required: ['board', 'channel', 't_from', 't_to'] }, execute: function (inp) {
+      var c = findChannel(inp.board, inp.channel), L = lift(c.s); if (L == null) throw new Error('Board not aligned to liftoff');
+      var t = c.s.ch.t, a = RL.idxAtTime(t, inp.t_from + L), b = RL.idxAtTime(t, inp.t_to + L), n = Math.min(300, inp.points || 60), step = Math.max(1, Math.ceil((b - a + 1) / n)), out = [];
+      for (var i = a; i <= b; i += step) out.push([+(t[i] - L).toFixed(3), fin(c.y[i]) ? +c.y[i].toPrecision(6) : null]);
+      return { board: c.s.label, channel: c.name, unit: c.unit, columns: ['t_plus_s', 'value'], samples: out };
+    } },
+    { name: 'get_stats', description: 'Min, max (with T+ times), mean and first/last value of a channel between two T+ times.', inputSchema: { type: 'object', properties: { board: { type: 'string' }, channel: { type: 'string' }, t_from: { type: 'number' }, t_to: { type: 'number' } }, required: ['board', 'channel', 't_from', 't_to'] }, execute: function (inp) {
+      var c = findChannel(inp.board, inp.channel), L = lift(c.s); var t = c.s.ch.t, a = RL.idxAtTime(t, inp.t_from + L), b = RL.idxAtTime(t, inp.t_to + L);
+      var mn = Infinity, mx = -Infinity, mnT, mxT, s = 0, n = 0;
+      for (var i = a; i <= b; i++) { var v = c.y[i]; if (!fin(v)) continue; n++; s += v; if (v < mn) { mn = v; mnT = t[i] - L; } if (v > mx) { mx = v; mxT = t[i] - L; } }
+      return { board: c.s.label, channel: c.name, unit: c.unit, samples: n, min: mn, t_min: mnT, max: mx, t_max: mxT, mean: n ? s / n : null, first: c.y[a], last: c.y[b] };
+    } },
+    { name: 'plot_channels', description: 'Draw a line chart in the chat. Use the same unit for all series (one y axis).', inputSchema: { type: 'object', properties: { title: { type: 'string' }, t_from: { type: 'number' }, t_to: { type: 'number' }, series: { type: 'array', items: { type: 'object', properties: { board: { type: 'string' }, channel: { type: 'string' } }, required: ['board', 'channel'] } } }, required: ['series', 't_from', 't_to'] }, execute: function (inp) {
+      var ser = inp.series.map(function (q, i) { var c = findChannel(q.board, q.channel); return { label: c.s.label + ' · ' + c.name, color: seriesColor(inp.series.length > 1 && inp.series.every(function (z) { return z.board === inp.series[0].board; }) ? i : c.s.slot), x: cachedTp(c.s), y: c.y, unit: c.unit }; });
+      var box = h('div', { class: 'msg bot', style: 'max-width:100%;width:100%' }, h('div', { style: 'font-weight:600;font-size:12.5px;margin-bottom:4px', text: inp.title || 'Plot' }));
+      $('#chatLog').appendChild(box);
+      makeChart(box, { unit: ser[0].unit, series: ser, range: [inp.t_from, inp.t_to], events: eventMarkers({ logged: false }), height: 200 });
+      scrollChat();
+      return { ok: true, drawn: ser.map(function (s) { return s.label; }) };
+    } }
+  ];
+  function md(text) {
+    var lines = esc(text).split('\n'), out = [], list = null, tbl = null;
+    function inline(s) { return s.replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*]+)\*/g, '$1<i>$2</i>'); }
+    function flush() { if (list) { out.push('<' + list.t + '>' + list.items.map(function (i) { return '<li>' + inline(i) + '</li>'; }).join('') + '</' + list.t + '>'); list = null; } if (tbl) { out.push('<table>' + tbl.map(function (r, i) { return '<tr>' + r.map(function (c) { return (i ? '<td>' : '<th>') + inline(c) + (i ? '</td>' : '</th>'); }).join('') + '</tr>'; }).join('') + '</table>'); tbl = null; } }
+    lines.forEach(function (l) {
+      var m;
+      if (/^\s*\|.*\|\s*$/.test(l)) { if (/^\s*\|[\s:\-|]+\|\s*$/.test(l)) return; if (list) flush(); tbl = tbl || []; tbl.push(l.trim().slice(1, -1).split('|').map(function (c) { return c.trim(); })); return; }
+      if ((m = /^\s*[-*•]\s+(.*)/.exec(l))) { if (tbl || (list && list.t !== 'ul')) flush(); list = list || { t: 'ul', items: [] }; list.items.push(m[1]); return; }
+      if ((m = /^\s*\d+[.)]\s+(.*)/.exec(l))) { if (tbl || (list && list.t !== 'ol')) flush(); list = list || { t: 'ol', items: [] }; list.items.push(m[1]); return; }
+      flush();
+      if ((m = /^#{1,4}\s+(.*)/.exec(l))) { out.push('<p><b>' + inline(m[1]) + '</b></p>'); return; }
+      if (l.trim()) out.push('<p>' + inline(l) + '</p>');
+    });
+    flush();
+    return out.join('');
+  }
+  function scrollChat() { var l = $('#chatLog'); l.scrollTop = l.scrollHeight; }
+  function addMsg(role, text) { var m = h('div', { class: 'msg ' + role }); if (role === 'bot') m.innerHTML = md(text); else m.textContent = text; $('#chatLog').appendChild(m); scrollChat(); return m; }
+  function updateSuggestions() {
+    var box = $('#chatSuggest'); box.innerHTML = '';
+    if (chat.history.length) return;
+    var qs = ['Summarise this flight for our EuRoC report', 'Why do the boards disagree on max velocity?', 'Plot altitude from all boards during ascent', 'Did anything go wrong during recovery?'];
+    if (S.sources.some(function (s) { return s.ch.byRole.control; })) qs.splice(2, 0, 'How did the airbrakes behave?');
+    qs.forEach(function (q) { box.appendChild(h('button', { text: q, onclick: function () { $('#chatInput').value = q; sendChat(); } })); });
+  }
+  async function sendChat() {
+    var inp = $('#chatInput'), text = inp.value.trim();
+    if (!text || chat.busy || !sampleCap) return;
+    inp.value = ''; $('#chatSuggest').innerHTML = '';
+    addMsg('user', text);
+    var first = !chat.history.length;
+    chat.history.push({ role: 'user', content: first ? SYSTEM + '\n\nCURRENT ANALYSIS:\n' + JSON.stringify(contextSummary()) + '\n\nQUESTION: ' + text : text });
+    var bot = addMsg('bot', 'Thinking…'); chat.busy = true; $('#chatSend').disabled = true;
+    chat.abort = new AbortController();
+    var tools = TOOLS.map(function (tl) { return { name: tl.name, description: tl.description, inputSchema: tl.inputSchema, execute: async function (input) { var note = h('div', { class: 'msg tool', text: '↳ ' + tl.name + (input && input.channel ? ' · ' + input.board + ' / ' + input.channel : '') }); $('#chatLog').insertBefore(note, bot); try { return tl.execute(input || {}); } catch (e) { note.textContent += ' — ' + e.message; throw e; } } }; });
+    try {
+      var res = await sampleCap(chat.history, { tools: tools, signal: chat.abort.signal, cache: false, onText: function (p) { bot.innerHTML = md(p.text || 'Thinking…'); $('#chatLog').appendChild(bot); scrollChat(); } });
+      bot.innerHTML = md(res.text || '(no answer)'); $('#chatLog').appendChild(bot);
+      chat.history.push({ role: 'assistant', content: res.text || '' });
+    } catch (e) {
+      chat.history.pop();
+      if (e && e.code === 'not_granted') { bot.innerHTML = md('The assistant was not allowed to run. You can enable it when prompted next time.'); }
+      else if (e && e.code === 'rate_limited') bot.innerHTML = md('Too many requests right now — please wait a moment and try again.');
+      else bot.innerHTML = md('Sorry, that failed: ' + ((e && e.message) || e));
+    }
+    chat.busy = false; $('#chatSend').disabled = false; scrollChat();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Wiring                                                              */
+  /* ------------------------------------------------------------------ */
+  var drop = $('#drop'), fi = $('#fileInput');
+  drop.addEventListener('click', function () { fi.click(); });
+  drop.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fi.click(); } });
+  $('#addFilesBtn').addEventListener('click', function () { fi.click(); });
+  fi.addEventListener('change', function () { addFiles(fi.files); fi.value = ''; });
+  ['dragenter', 'dragover'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('drag'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); if (ev === 'drop' || e.target === document.documentElement) drop.classList.remove('drag'); }); });
+  document.addEventListener('drop', function (e) { drop.classList.remove('drag'); if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+  $('#tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; S.tab = b.dataset.tab; renderTab(); });
+  $('#target').addEventListener('change', function (e) { S.settings.target = e.target.value; store.set('target', e.target.value); renderTab(); });
+  $('#groundTemp').addEventListener('change', function (e) { S.settings.groundTemp = +e.target.value || 15; store.set('groundTemp', S.settings.groundTemp); S.sources.forEach(analyzeSource); render(); });
+  $('#refSel').addEventListener('change', function (e) { S.settings.ref = e.target.value; renderTab(); });
+  $('#clearBtn').addEventListener('click', function () { S.files = []; S.sources = []; chat.history = []; $('#chatLog').innerHTML = ''; document.body.classList.remove('chat-open'); render(); });
+  $('#exportBtn').addEventListener('click', exportSummary);
+  $('#profilesBtn').addEventListener('click', openProfiles);
+  $('#launchName').value = store.get('launchName', '');
+  $('#launchName').addEventListener('change', function (e) { store.set('launchName', e.target.value); });
+  $('#chatFab').addEventListener('click', function () { document.body.classList.add('chat-open'); updateSuggestions(); setTimeout(function () { $('#chatInput').focus(); window.dispatchEvent(new Event('resize')); }, 220); });
+  $('#chatClose').addEventListener('click', function () { document.body.classList.remove('chat-open'); });
+  $('#chatClear').addEventListener('click', function () { if (chat.abort) chat.abort.abort(); chat.history = []; $('#chatLog').innerHTML = ''; updateSuggestions(); });
+  $('#chatSend').addEventListener('click', sendChat);
+  $('#chatInput').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } });
+  $('#chatInput').addEventListener('input', function (e) { e.target.style.height = 'auto'; e.target.style.height = Math.min(160, e.target.scrollHeight) + 'px'; });
+  if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { if (S.sources.length) renderTab(); });
+
+  // capabilities (only present when published as an artifact)
+  if (window.claude && window.claude.use) {
+    window.claude.use('sample').then(function (s) { sampleCap = s; if (S.sources.length) render(); }).catch(function () { });
+    window.claude.use('downloads').then(function (d) { downloadsCap = d; if (S.sources.length) render(); }).catch(function () { });
+  }
+  window.__FLL = { S: S, addFiles: addFiles, rebuild: rebuild, contextSummary: contextSummary, TOOLS: TOOLS };
+})();
+</script>
+</body>
+</html>

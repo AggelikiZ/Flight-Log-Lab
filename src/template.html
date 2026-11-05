@@ -123,6 +123,12 @@ body.chat-open main { margin-right: 420px; }
 .tile.hero { grid-column: span 2; }
 .tile.hero .v { font-size: 34px; }
 .delta-pos { color: var(--good); } .delta-neg { color: var(--warning); }
+.mform { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 14px; font-size: 13px; color: var(--text-secondary); }
+.mform label { display: flex; flex-direction: column; gap: 3px; }
+.mform input { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; font-family: var(--mono); color: var(--text-primary); }
+.mbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.mbar select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; min-width: 220px; color: var(--text-primary); }
+td .dlt { font-size: 11px; margin-left: 6px; }
 
 .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; margin-bottom: 16px; }
 .card h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
@@ -223,6 +229,7 @@ body.chat-open .fab { display: none; }
 </header>
 <main>
   <input type="file" id="fileInput" multiple class="hidden" accept=".csv,.txt,.tsv,.log,.cfl,.bin,.dat">
+  <input type="file" id="motorFile" class="hidden" accept=".eng,.rse,.csv,.txt,.tsv">
   <div class="drop" id="drop" role="button" tabindex="0">
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted)" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
     <div><h2>Drop your flight logs here</h2>
@@ -246,6 +253,7 @@ body.chat-open .fab { display: none; }
       <button data-tab="events">Events</button>
       <button data-tab="gps">GPS track</button>
       <button data-tab="explore">Channel explorer</button>
+      <button data-tab="motor">Motor &amp; thrust</button>
     </nav>
     <section id="tab-overview"></section>
     <section id="tab-plots" class="hidden"></section>
@@ -253,6 +261,7 @@ body.chat-open .fab { display: none; }
     <section id="tab-events" class="hidden"></section>
     <section id="tab-gps" class="hidden"></section>
     <section id="tab-explore" class="hidden"></section>
+    <section id="tab-motor" class="hidden"></section>
   </div>
 </main>
 
@@ -276,6 +285,7 @@ body.chat-open .fab { display: none; }
 
 <script>/*UPLOT_JS*/</script>
 <script>/*CORE_JS*/</script>
+<script>/*MOTOR_JS*/</script>
 <script>/*APP_JS*/</script>
 </body>
 </html>

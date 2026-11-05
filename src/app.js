@@ -149,6 +149,7 @@
   }
 
   function analyzeSource(s) {
+    if (typeof motorMemo !== 'undefined') motorMemo.key = null;
     s.ch = RL.buildChannels(s.table, s.mapping);
     s.an = RL.analyze(s.ch, { groundTempC: +S.settings.groundTemp });
     // logged events
@@ -255,10 +256,10 @@
       legend: { live: true },
       scales: { x: { time: false, range: function () { return range; } }, y: { range: function (u, mn, mx) { if (mn == null) return [0, 1]; var p = (mx - mn) * 0.06 || 1; var lo = spec.yMin != null ? Math.min(spec.yMin, mn - p) : mn - p; return [lo, mx + p]; } } },
       axes: [
-        { stroke: axisStroke, grid: { stroke: grid, width: 1 }, ticks: { stroke: grid }, font: font, values: function (u, v) { return v.map(function (x) { return String(+x.toFixed(3)); }); }, label: 'T+ (s)', labelFont: '11px ' + cssVar('--sans'), labelSize: 18 },
+        { stroke: axisStroke, grid: { stroke: grid, width: 1 }, ticks: { stroke: grid }, font: font, values: function (u, v) { return v.map(function (x) { return String(+x.toFixed(3)); }); }, label: spec.xLabel || 'T+ (s)', labelFont: '11px ' + cssVar('--sans'), labelSize: 18 },
         { stroke: axisStroke, grid: { stroke: grid, width: 1 }, ticks: { stroke: grid }, font: font, size: function (u, values) { var m = 0; (values || []).forEach(function (v) { m = Math.max(m, String(v).length); }); return Math.max(40, m * 7 + 26); }, label: spec.unit || '', labelFont: '11px ' + cssVar('--sans'), labelSize: 16 }
       ],
-      series: [{ label: 'T+', value: function (u, v) { return v == null ? '—' : v.toFixed(2) + ' s'; } }].concat(spec.series.map(function (s) {
+      series: [{ label: spec.xShort || 'T+', value: function (u, v) { return v == null ? '—' : v.toFixed(2) + ' s'; } }].concat(spec.series.map(function (s) {
         return {
           label: s.label, stroke: s.color, width: s.width || 1.6, dash: s.dash, spanGaps: false,
           paths: s.step ? uPlot.paths.stepped({ align: 1 }) : undefined,
@@ -384,11 +385,11 @@
   function renderTab() {
     destroyCharts();
     $$('#tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === S.tab); });
-    ['overview', 'plots', 'boards', 'events', 'gps', 'explore'].forEach(function (t) { $('#tab-' + t).classList.toggle('hidden', t !== S.tab); });
+    ['overview', 'plots', 'boards', 'events', 'gps', 'explore', 'motor'].forEach(function (t) { $('#tab-' + t).classList.toggle('hidden', t !== S.tab); });
     var hasGps = S.sources.some(function (s) { return s.an.gps; });
     $('#tabs [data-tab=gps]').classList.toggle('hidden', !hasGps);
     var el = $('#tab-' + S.tab); el.innerHTML = '';
-    ({ overview: renderOverview, plots: renderPlots, boards: renderBoards, events: renderEvents, gps: renderGps, explore: renderExplore })[S.tab](el);
+    ({ overview: renderOverview, plots: renderPlots, boards: renderBoards, events: renderEvents, gps: renderGps, explore: renderExplore, motor: renderMotor })[S.tab](el);
   }
   function rangeControl() {
     var seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Time range' });
@@ -690,6 +691,222 @@
   /* ------------------------------------------------------------------ */
   /* Column mapping editor                                               */
   /* ------------------------------------------------------------------ */
+  /* ---------- Motor & thrust ---------- */
+  S.motor = {
+    list: store.get('motors', []), sel: store.get('motorSel', null),
+    rocket: Object.assign({ mass: '', diameter: '', cd: 0.45, rail: 12, angle: 5, padAlt: 0 }, store.get('rocket', {}))
+  };
+  var motorMemo = { key: null, val: null };
+  function saveMotors() { store.set('motors', S.motor.list); store.set('motorSel', S.motor.sel); motorMemo.key = null; }
+  function currentMotor() { var raw = S.motor.list.find(function (x) { return x.id === S.motor.sel; }); return raw && raw.curve && raw.curve.length > 1 ? MOTOR.prepare(raw) : null; }
+  function rocketParams() {
+    var r = S.motor.rocket, o = { liftoffMass: +r.mass, diameter: +r.diameter / 1000, cd: +r.cd, railLength: Math.max(0.01, +r.rail || 0), angleDeg: +r.angle || 0 };
+    o.ok = o.liftoffMass > 0 && o.diameter > 0 && o.cd > 0; return o;
+  }
+  function motorEnv(padPressure) { return { groundTempC: +S.settings.groundTemp, padAltitude: +S.motor.rocket.padAlt || 0, padPressure: padPressure }; }
+  function altAGL(s) { var a = s.an; if (!a.series.alt) return null; if (!s._agl || s._aglG !== a.ground) { var y = new Float64Array(a.series.alt.length); for (var i = 0; i < y.length; i++) y[i] = a.series.alt[i] - a.ground; s._agl = y; s._aglG = a.ground; } return s._agl; }
+  function motorAnalysis() {
+    var m = currentMotor(), rk = rocketParams();
+    var key = JSON.stringify([S.motor.sel, m && m.impulse, m && m.propMass, S.motor.rocket, S.settings.groundTemp, S.sources.map(function (s) { return s.key + ':' + lift(s); })]);
+    if (motorMemo.key === key) return motorMemo.val;
+    var res = { motor: m, rocket: rk, sim: null, boards: [], notes: [] };
+    if (m && rk.ok) {
+      if (!(m.propMass > 0)) res.notes.push({ level: 'warn', text: 'The motor has no propellant mass, so the rocket mass is kept constant. Enter it under the motor for a correct simulation and thrust extraction.' });
+      res.sim = MOTOR.simulate(m, rk, motorEnv());
+      res.sim.notes.forEach(function (n) { res.notes.push({ level: 'warn', text: n }); });
+      if (res.sim.ok) { var S2 = res.sim.series, tx = new Float64Array(S2.t.length); for (var i = 0; i < tx.length; i++) tx[i] = S2.t[i] - res.sim.tLift; res.sim.tp = tx; }
+    }
+    if (rk.ok) flightSources().forEach(function (s) {
+      var a = s.an, L = lift(s), b = { s: s };
+      if (!a.series.thr) { b.missing = 'no accelerometer along the thrust axis'; res.boards.push(b); return; }
+      var v = a.series.vAcc && a.sampleRate > 20 ? a.series.vAcc : a.series.v;
+      b.vName = v === a.series.vAcc ? 'integrated acceleration' : a.velName;
+      b.ex = MOTOR.extractThrust({ t: cachedTp(s), f: a.series.thr, v: v, alt: altAGL(s), tApo: fin(a.tApo) ? a.tApo - L : NaN }, m, rk, motorEnv(a.padPressure),
+        { preLiftImpulse: m && res.sim && res.sim.ok ? MOTOR.impulseAt(m, res.sim.tLift) : 0 });
+      if (a.saturation && a.saturation.length) b.ex.notes.unshift('The accelerometer hit its ±' + a.saturation[0].g + ' g limit — peak thrust and impulse are underestimated.');
+      res.boards.push(b);
+    });
+    motorMemo = { key: key, val: res };
+    return res;
+  }
+  function uniformCurve(m, x0) { // resampled so the chart draws it as one continuous line
+    var n = Math.min(4000, Math.max(50, Math.ceil(m.tEnd / 0.005))), x = new Float64Array(n + 1), y = new Float64Array(n + 1);
+    for (var i = 0; i <= n; i++) { var tt = m.tEnd * i / n; x[i] = tt - (x0 || 0); y[i] = MOTOR.thrustAt(m, tt); }
+    return { x: x, y: y };
+  }
+  function addMotor(mo) {
+    mo.id = 'm' + Date.now().toString(36); S.motor.list.push(mo); S.motor.sel = mo.id; saveMotors(); renderTab();
+    toast('Motor “' + mo.name + '” saved in this browser');
+  }
+  function openManualMotor() {
+    var back = h('div', { class: 'modal-back', onclick: function (e) { if (e.target === back) back.remove(); } });
+    var fields = [['name', 'Name', 'text', 'e.g. our M-class motor'], ['impulse', 'Total impulse (N·s)', 'number'], ['burnTime', 'Burn time (s)', 'number'], ['propMass', 'Propellant mass (kg)', 'number'], ['totalMass', 'Total motor mass (kg)', 'number']];
+    var inputs = {}, form = h('div', { class: 'mform' }, fields.map(function (f2) { inputs[f2[0]] = h('input', { type: f2[2], step: 'any', placeholder: f2[3] || '' }); return h('label', null, f2[1], inputs[f2[0]]); }));
+    back.appendChild(h('div', { class: 'modal', style: 'width:min(640px,100%)' },
+      h('header', null, h('h2', { text: 'Enter motor data manually' }), h('button', { class: 'btn ghost small', text: '✕', onclick: function () { back.remove(); } })),
+      h('div', { class: 'content' }, h('p', { class: 'dim', style: 'margin-top:0', text: 'Without a thrust-curve file the curve is approximated as a fast rise, a flat burn and a short tail-off with the same total impulse. Load a .eng/.rse file (e.g. from thrustcurve.org) or your static-fire data for real curves.' }), form),
+      h('footer', null, h('button', { class: 'btn primary', text: 'Save motor', onclick: function () {
+        var o = {}; for (var k in inputs) o[k] = inputs[k].value;
+        var mo = MOTOR.manualMotor(o); if (!mo) { toast('Enter the total impulse and burn time'); return; }
+        back.remove(); addMotor(mo);
+      } }))));
+    document.body.appendChild(back); inputs.name.focus();
+  }
+  function renderMotor(el) {
+    var MA = motorAnalysis(), m = MA.motor, rk = MA.rocket, sim = MA.sim && MA.sim.ok ? MA.sim : null;
+
+    // ----- motor picker
+    var mcard = h('div', { class: 'card' }, h('h3', null, 'Motor', h('span', { class: 'sub', text: 'saved in this browser' })));
+    var sel = h('select', { 'aria-label': 'Motor', onchange: function (e) { S.motor.sel = e.target.value || null; saveMotors(); renderTab(); } },
+      h('option', { value: '', text: S.motor.list.length ? 'Choose a motor…' : 'No motors saved yet' }),
+      S.motor.list.map(function (x) { return h('option', { value: x.id, text: x.name + (x.maker ? ' · ' + x.maker : '') + (x.approx ? ' (approx.)' : ''), selected: x.id === S.motor.sel }); }));
+    mcard.appendChild(h('div', { class: 'mbar' }, sel,
+      h('button', { class: 'btn', text: 'Load thrust curve…', title: '.eng / .rse files (e.g. from thrustcurve.org) or a time,thrust CSV from a static fire', onclick: function () { $('#motorFile').click(); } }),
+      h('button', { class: 'btn ghost', text: 'Enter manually', onclick: openManualMotor }),
+      m ? h('button', { class: 'btn ghost', text: 'Delete', onclick: function () { var gone = S.motor.list.find(function (x) { return x.id === S.motor.sel; }); S.motor.list = S.motor.list.filter(function (x) { return x !== gone; }); S.motor.sel = null; saveMotors(); renderTab(); toast('Deleted “' + gone.name + '”'); } }) : null,
+      h('span', { class: 'hint', text: 'Thrust curves: .eng / .rse from thrustcurve.org, or time,thrust CSV from a static fire.' })));
+    el.appendChild(mcard);
+    if (!m) { mcard.appendChild(h('p', { class: 'dim', style: 'margin:0', text: 'Load your motor’s thrust curve to see its numbers, simulate the flight, and compare it with the thrust measured on each board.' })); return; }
+
+    var raw = S.motor.list.find(function (x) { return x.id === S.motor.sel; });
+    function massInput(key, label) {
+      return h('label', null, label, h('input', { type: 'number', step: 'any', value: fin(raw[key]) ? raw[key] : '', placeholder: 'required', onchange: function (e) { raw[key] = e.target.value === '' ? NaN : +e.target.value; saveMotors(); renderTab(); } }));
+    }
+    var tiles = h('div', { class: 'tiles', style: 'margin-bottom:12px' });
+    function tile(k, v, unit, d, sub) { tiles.appendChild(h('div', { class: 'tile' }, h('div', { class: 'k', text: k }), h('div', { class: 'v', html: (typeof v === 'string' ? esc(v) : fin(v) ? esc(f(v, d)) : '—') + (unit && fin(v) ? '<small>' + unit + '</small>' : '') }), sub ? h('div', { class: 's', text: sub }) : null)); }
+    tile('Designation', m.designation, '', 0, m.cls + '-class' + (m.approx ? ' · approximated curve' : ''));
+    tile('Total impulse', m.impulse, 'N·s', 0);
+    tile('Average thrust', m.avg, 'N', 0);
+    tile('Peak thrust', m.peak, 'N', 0, 'at ' + f(m.peakT, 2) + ' s');
+    tile('Burn time', m.burnTime, 's', 2, '5 % → 5 % of peak');
+    tile('Specific impulse', m.isp, 's', 0, fin(m.isp) ? 'from propellant mass' : 'needs propellant mass');
+    mcard.appendChild(tiles);
+    mcard.appendChild(h('div', { class: 'mform', style: 'margin-bottom:12px' }, massInput('propMass', 'Propellant mass (kg)'), massInput('totalMass', 'Total motor mass (kg)')));
+    var cv = uniformCurve(m, 0);
+    makeChart(mcard, { unit: 'N', xLabel: 'time from ignition (s)', xShort: 't', series: [{ label: m.name + ' thrust', color: seriesColor(0), x: cv.x, y: cv.y }], range: [0, m.tEnd * 1.04], height: 200, yMin: 0 });
+
+    // ----- rocket parameters
+    var r = S.motor.rocket, rcard = h('div', { class: 'card' }, h('h3', null, 'Rocket', h('span', { class: 'sub', text: 'used for the simulation and to turn measured acceleration into thrust' })));
+    function rin(key, label, ph) { return h('label', null, label, h('input', { type: 'number', step: 'any', value: r[key], placeholder: ph || '', onchange: function (e) { r[key] = e.target.value; store.set('rocket', r); renderTab(); } })); }
+    rcard.appendChild(h('div', { class: 'mform' },
+      rin('mass', 'Wet mass on the pad, incl. full motor (kg)', 'required'), rin('diameter', 'Body diameter (mm)', 'required'), rin('cd', 'Drag coefficient Cd', 'e.g. 0.45'),
+      rin('rail', 'Launch rail length (m)'), rin('angle', 'Launch angle from vertical (°)'), rin('padAlt', 'Pad altitude above sea level (m)')));
+    var cdB = MA.boards.filter(function (b) { return b.ex && fin(b.ex.cd); });
+    if (cdB.length) {
+      var cdM = cdB[0].ex.cd;
+      rcard.appendChild(h('div', { class: 'mbar', style: 'margin:12px 0 0' }, h('span', { class: 'hint', text: 'Drag coefficient measured during the coast on ' + cdB[0].s.label + ': ' + cdM.toFixed(3) + ' (Mach ' + cdB[0].ex.cdMach[0].toFixed(2) + '–' + cdB[0].ex.cdMach[1].toFixed(2) + ').' }),
+        h('button', { class: 'btn small', text: 'Use Cd ' + cdM.toFixed(3) + ' in the simulation', onclick: function () { r.cd = +cdM.toFixed(3); store.set('rocket', r); renderTab(); } })));
+    }
+    el.appendChild(rcard);
+    if (!rk.ok) { el.appendChild(h('div', { class: 'card empty-state', text: 'Enter the rocket’s wet mass, diameter and drag coefficient to simulate the flight and extract thrust from the logs.' })); return; }
+
+    // ----- headline numbers
+    var ref = refSource(), refA = ref && ref.an.ok ? ref.an : null, refB = MA.boards.find(function (b) { return b.s === ref && b.ex && b.ex.ok; }) || MA.boards.find(function (b) { return b.ex && b.ex.ok; });
+    var ht = h('div', { class: 'tiles' });
+    function pct(meas, theo) { return fin(meas) && fin(theo) && theo ? (meas - theo) / theo * 100 : NaN; }
+    function htile(k, v, unit, d, cmp, cmpLabel) {
+      var p = pct(v, cmp), sub = fin(p) ? '<span class="' + (Math.abs(p) < 5 ? 'delta-pos' : 'delta-neg') + '">' + (p >= 0 ? '+' : '−') + f(Math.abs(p), 1) + ' %</span> vs ' + esc(cmpLabel) + ' ' + esc(f(cmp, d)) + (unit ? ' ' + unit : '') : (cmpLabel || '');
+      ht.appendChild(h('div', { class: 'tile' }, h('div', { class: 'k', text: k }), h('div', { class: 'v', html: (fin(v) ? esc(f(v, d)) + (unit ? '<small>' + unit + '</small>' : '') : '—') }), h('div', { class: 's', html: sub })));
+    }
+    if (sim) htile('Predicted apogee', sim.apogee, 'm', 0, refA && refA.apogee, 'measured');
+    if (refB) htile('Delivered impulse · ' + refB.s.label, refB.ex.impulseTotal, 'N·s', 0, m.impulse, 'nominal');
+    if (refB) htile('Measured peak thrust', refB.ex.peak, 'N', 0, m.peak, 'nominal');
+    if (sim) htile('Rail exit velocity', sim.railExitV, 'm/s', 1, NaN, 'simulated, ' + f(+r.rail, 1) + ' m rail');
+    if (sim) htile('Liftoff thrust-to-weight', sim.liftoffTW, '', 1, NaN, 'simulated');
+    if (cdB.length) htile('Coast drag coefficient', cdB[0].ex.cd, '', 3, rk.cd, 'entered');
+    el.appendChild(ht);
+
+    // ----- theory vs flight table
+    var cols = MA.boards.filter(function (b) { return b.ex && b.ex.ok || b.s.an.ok; });
+    function bval(b, fn) { try { return fn(b); } catch (e) { return NaN; } }
+    function vAt(s, series, tRaw) { return series && fin(tRaw) ? RL.valueAt(s.ch.t, series, tRaw) : NaN; }
+    var rows = [
+      ['Total impulse', 'N·s', 0, m.impulse, function (b) { return b.ex && b.ex.impulseTotal; }, 'nominal from the curve; measured = from liftoff + the nominal impulse burnt on the pad before liftoff'],
+      ['Average thrust (in flight)', 'N', 0, sim ? (m.impulse - MOTOR.impulseAt(m, sim.tLift)) / (m.burnEnd - sim.tLift) : m.avg, function (b) { return b.ex && b.ex.avg; }, 'impulse after liftoff ÷ time from liftoff to thrust end'],
+      ['Peak thrust', 'N', 0, m.peak, function (b) { return b.ex && b.ex.peak; }],
+      ['Thrust ends', 's', 2, sim ? m.burnEnd - sim.tLift : NaN, function (b) { return b.ex && b.ex.burnEnd; }, 'T+; thrust falls below 5 % of peak', 'T+'],
+      ['Burnout (acceleration < 1 g)', 's', 2, sim && sim.tBurn - sim.tLift, function (b) { return b.s.an.tBurn - b.s.an.tLift; }, 'T+; same definition as the Overview', 'T+'],
+      ['Altitude at burnout', 'm', 0, sim && sim.burnAlt, function (b) { return vAt(b.s, altAGL(b.s), b.s.an.tBurn); }],
+      ['Velocity at burnout', 'm/s', 0, sim && sim.burnV, function (b) { return vAt(b.s, b.s.an.series.vAcc && b.s.an.sampleRate > 20 ? b.s.an.series.vAcc : b.s.an.series.v, b.s.an.tBurn); }],
+      ['Max acceleration (net)', 'g', 1, sim && (sim.maxSf - G) / G, function (b) { return b.s.an.maxAcc / G; }],
+      ['Max velocity', 'm/s', 0, sim && sim.maxV, function (b) { return b.s.an.maxV; }],
+      ['Max Mach', '', 2, sim && sim.maxMach, function (b) { return b.s.an.mach; }],
+      ['Rail exit velocity', 'm/s', 1, sim && sim.railExitV, function () { return NaN; }],
+      ['Apogee (AGL)', 'm', 0, sim && sim.apogee, function (b) { return b.s.an.apogee; }],
+      ['Time to apogee', 's', 2, sim && sim.tApo - sim.tLift, function (b) { return b.s.an.tApo - b.s.an.tLift; }],
+      ['Drag coefficient (coast)', '', 3, rk.cd, function (b) { return b.ex && b.ex.cd; }, 'theory column = the Cd you entered']
+    ];
+    var tbl = h('table', { class: 't' });
+    tbl.appendChild(h('thead', null, h('tr', null, h('th', { text: 'Metric' }), h('th', { class: 'n', text: sim ? 'Theory (motor + simulation)' : 'Motor data' }),
+      cols.map(function (b) { return h('th', { class: 'n' }, h('span', { class: 'swatch', style: 'display:inline-block;margin:0 5px 0 0;vertical-align:0;background:' + seriesColor(b.s.slot) }), b.s.label); }))));
+    var tb = h('tbody'); tbl.appendChild(tb);
+    rows.forEach(function (row) {
+      var theo = row[3], vals = cols.map(function (b) { return bval(b, row[4]); });
+      if (!fin(theo) && !vals.some(fin)) return;
+      function cell(v) { return fin(v) ? (row[6] || '') + f(v, row[2]) + (row[1] ? ' ' + row[1] : '') : null; }
+      tb.appendChild(h('tr', null, h('td', { title: row[5] || '' }, row[0], row[5] ? h('span', { class: 'dim', text: ' ⓘ' }) : null),
+        h('td', { class: 'n' }, cell(theo) || h('span', { class: 'dim', text: '—' })),
+        vals.map(function (v) {
+          var p = pct(v, theo), c = cell(v);
+          return h('td', { class: 'n' }, c || h('span', { class: 'dim', text: '—' }), c && fin(p) && row[6] !== 'T+' ? h('span', { class: 'dlt ' + (Math.abs(p) < 5 ? 'delta-pos' : 'delta-neg'), text: (p >= 0 ? '+' : '−') + f(Math.abs(p), 1) + '%' }) : null);
+        })));
+    });
+    el.appendChild(h('div', { class: 'card' }, h('h3', null, 'Theory vs flight', h('span', { class: 'sub', text: 'percentages compare each board with the theory column · hover a metric for its definition' })), h('div', { style: 'overflow-x:auto' }, tbl)));
+
+    // ----- charts
+    var ex = MA.boards.filter(function (b) { return b.ex && b.ex.ok; });
+    var burnEnd = Math.max.apply(null, [sim ? m.burnEnd - sim.tLift : m.burnEnd].concat(ex.map(function (b) { return b.ex.burnEnd; })).filter(fin));
+    var muted = cssVar('--text-muted');
+    var thrSeries = [];
+    var nc = uniformCurve(m, sim ? sim.tLift : 0); thrSeries.push({ label: 'Nominal (' + m.name + ')', color: muted, x: nc.x, y: nc.y, dash: [6, 4], width: 2 });
+    ex.forEach(function (b) { thrSeries.push({ label: b.s.label + ' · from accelerometer', color: seriesColor(b.s.slot), x: b.ex.t, y: b.ex.thrust }); });
+    chartCard(el, 'Thrust', ex.length ? 'nominal curve vs thrust reconstructed from each board (T = m·a + drag)' : 'nominal curve — no board has an accelerometer along the thrust axis', function (c) {
+      return makeChart(c, { unit: 'N', series: thrSeries, range: [-0.6, (fin(burnEnd) ? burnEnd : m.tEnd) + 1.5], events: eventMarkers({ logged: false }), height: 300, syncKey: 'mo-b' });
+    });
+    if (sim) {
+      var simC = { label: 'Simulation', color: muted, x: sim.tp, dash: [6, 4], width: 2 };
+      var grid = h('div', { class: 'grid2' }); el.appendChild(grid);
+      var asc = [-2, Math.max(sim.tApo - sim.tLift, refA && fin(refA.tApo) ? refA.tApo - refA.tLift : 0) + 4];
+      chartCard(grid, 'Altitude', 'simulation vs boards', function (c) { return makeChart(c, { unit: 'm', series: [Object.assign({ y: Float64Array.from(sim.series.alt) }, simC)].concat(altSeries()), range: asc, height: 260, syncKey: 'mo' }); });
+      chartCard(grid, 'Vertical velocity', 'simulation vs boards', function (c) { return makeChart(c, { unit: 'm/s', series: [Object.assign({ y: Float64Array.from(sim.series.vz) }, simC)].concat(velSeries(false)), range: asc, height: 260, syncKey: 'mo' }); });
+      var simAcc = Float64Array.from(sim.series.sf, function (x) { return (x - G) / G; });
+      el.appendChild(h('div', { style: 'height:16px' }));
+      chartCard(el, 'Net acceleration', 'simulation vs boards, in g', function (c) { return makeChart(c, { unit: 'g', series: [Object.assign({ y: simAcc }, simC)].concat(accSeries()), range: [-0.6, (fin(burnEnd) ? burnEnd : m.tEnd) + 4], height: 240, syncKey: 'mo-b' }); });
+    }
+
+    // ----- notes
+    var notes = MA.notes.slice();
+    MA.boards.forEach(function (b) {
+      if (b.missing) notes.push({ level: 'info', who: b.s.label, text: 'Thrust not extracted: ' + b.missing + '.' });
+      else { (b.ex.notes || []).forEach(function (n) { notes.push({ level: /limit|never|No velocity/.test(n) ? 'warn' : 'info', who: b.s.label, text: n }); }); if (b.ex.ok) notes.push({ level: 'info', who: b.s.label, text: 'Drag computed from ' + b.vName + '.' }); }
+    });
+    notes.push({ level: 'info', text: 'Thrust from the logs uses T = m·a + ½ρv²·Cd·A, with mass falling as propellant burns (in proportion to impulse delivered). Thrust built up on the pad before liftoff cannot be seen by the accelerometer; the nominal pre-liftoff impulse' + (sim ? ' (' + f(MOTOR.impulseAt(m, sim.tLift), 0) + ' N·s)' : '') + ' is added to the measured total.' });
+    notes.push({ level: 'info', text: 'The simulation is a point-mass model: constant Cd, no wind, no weathercocking, rocket always pointing along its velocity after the rail. Use OpenRocket/RASAero for detailed predictions; the measured coast Cd above helps calibrate them.' });
+    var ncard = h('div', { class: 'card' }, h('h3', null, 'Notes & assumptions')), list = h('div', { class: 'notes' });
+    notes.forEach(function (x) { list.appendChild(h('div', { class: 'note ' + x.level }, h('span', { class: 'ico', text: x.level === 'warn' ? '!' : 'i' }), h('div', null, x.who ? h('span', { class: 'who', text: x.who + ':' }) : null, x.text))); });
+    ncard.appendChild(list); el.appendChild(ncard);
+  }
+  function motorContext() {
+    var MA = motorAnalysis(), m = MA.motor; if (!m) return null;
+    var r = function (x, d) { return fin(x) ? +x.toFixed(d) : null; }, sim = MA.sim && MA.sim.ok ? MA.sim : null;
+    var o = { motor: { name: m.name, designation: m.designation, approximated_curve: !!m.approx, total_impulse_Ns: r(m.impulse, 0), avg_thrust_N: r(m.avg, 0), peak_thrust_N: r(m.peak, 0), burn_time_s: r(m.burnTime, 2), propellant_kg: r(m.propMass, 3), isp_s: r(m.isp, 0) },
+      rocket: { wet_mass_kg: MA.rocket.liftoffMass || null, diameter_mm: MA.rocket.diameter ? MA.rocket.diameter * 1000 : null, cd: MA.rocket.cd || null, rail_m: MA.rocket.railLength, launch_angle_deg: MA.rocket.angleDeg } };
+    if (sim) o.simulation = { apogee_m: r(sim.apogee, 0), t_apogee: r(sim.tApo - sim.tLift, 2), max_velocity_mps: r(sim.maxV, 1), max_mach: r(sim.maxMach, 3), max_net_accel_g: r((sim.maxSf - G) / G, 2), t_burnout: r(sim.tBurn - sim.tLift, 2), burnout_alt_m: r(sim.burnAlt, 0), burnout_velocity_mps: r(sim.burnV, 1), rail_exit_velocity_mps: r(sim.railExitV, 1), liftoff_thrust_to_weight: r(sim.liftoffTW, 2) };
+    o.measured_thrust = MA.boards.map(function (b) { return b.ex && b.ex.ok ? { board: b.s.label, total_impulse_Ns: r(b.ex.impulseTotal, 0), impulse_after_liftoff_Ns: r(b.ex.impulse, 0), avg_thrust_N: r(b.ex.avg, 0), peak_thrust_N: r(b.ex.peak, 0), t_peak: r(b.ex.peakT, 2), thrust_ends_t: r(b.ex.burnEnd, 2), coast_cd: r(b.ex.cd, 3), notes: b.ex.notes } : { board: b.s.label, not_available: b.missing || 'not computed' }; });
+    return o;
+  }
+  $('#motorFile').addEventListener('change', function (e) {
+    var file = e.target.files[0]; e.target.value = ''; if (!file) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      var mo = MOTOR.parseMotorFile(String(rd.result), file.name);
+      if (!mo || mo.curve.length < 3) { toast('Could not find a thrust curve in ' + file.name); return; }
+      if (mo.units && (mo.units.time !== 's' || mo.units.force !== 'N')) toast('Read as time in ' + mo.units.time + ', thrust in ' + mo.units.force);
+      addMotor(mo);
+    };
+    rd.readAsText(file);
+  });
+
   function openMapping(src) {
     var back = h('div', { class: 'modal-back', onclick: function (e) { if (e.target === back) back.remove(); } });
     var content = h('div', { class: 'content' });
@@ -813,7 +1030,12 @@
     var s = S.sources.find(function (x) { return x.label.toLowerCase() === String(source).toLowerCase(); }) || S.sources.find(function (x) { return x.label.toLowerCase().indexOf(String(source).toLowerCase()) >= 0; });
     if (!s) throw new Error('Unknown board "' + source + '". Boards: ' + S.sources.map(function (x) { return x.label; }).join(', '));
     var special = { altitude_agl: function () { var a = s.an.series.alt; if (!a) return null; var o = new Float64Array(a.length); for (var i = 0; i < a.length; i++) o[i] = a[i] - s.an.ground; return { y: o, unit: 'm' }; }, velocity: function () { return s.an.series.v ? { y: s.an.series.v, unit: 'm/s' } : null; }, net_accel_g: function () { var a = s.an.series.thr; if (!a) return null; var o = new Float64Array(a.length); for (var i = 0; i < a.length; i++) o[i] = (a[i] - G) / G; return { y: o, unit: 'g' }; } };
-    if (special[channel]) { var r = special[channel](); if (!r) throw new Error('Board has no ' + channel); return { s: s, y: r.y, unit: r.unit, name: channel }; }
+    special.thrust_N = function () {
+      var b = motorAnalysis().boards.find(function (x) { return x.s === s; });
+      if (!b || !b.ex || !b.ex.ok) return null;
+      var o = new Float64Array(s.ch.t.length).fill(NaN); o.set(b.ex.thrust, b.ex.i0); return { y: o, unit: 'N' };
+    };
+    if (special[channel]) { var r = special[channel](); if (!r) throw new Error('Board has no ' + channel + (channel === 'thrust_N' ? ' (set a motor and the rocket on the Motor & thrust tab; the board needs an accelerometer)' : '')); return { s: s, y: r.y, unit: r.unit, name: channel }; }
     var c = s.ch.list.find(function (x) { return x.name === channel; }) || s.ch.list.find(function (x) { return x.name.toLowerCase() === String(channel).toLowerCase(); });
     if (!c || !c.y) throw new Error('Unknown channel "' + channel + '" on ' + s.label + '. Use list_channels.');
     return { s: s, y: c.y, unit: c.unit, name: c.name };
@@ -832,12 +1054,14 @@
       b.channels = s.ch.list.filter(function (c) { return c.y; }).map(function (c) { return c.name + ' [' + c.role + (c.unit ? ', ' + c.unit : '') + ']'; });
       o.boards.push(b);
     });
+    var mc = motorContext(); if (mc) o.motor_analysis = mc;
     o.events = allEvents().filter(function (e) { return fin(e.t) && e.t > -60; }).slice(0, 120).map(function (e) { return { t: +e.t.toFixed(2), board: e.src.label, event: e.label, type: e.kind }; });
     return o;
   }
   var SYSTEM = 'You are the flight-data analyst built into "Flight Log Lab", a web app a student rocketry team uses to analyse launch logs (e.g. EuRoC). ' +
     'Below is the current analysis the app computed (JSON). Times are T+ seconds from each board\'s detected liftoff; altitudes are metres above the pad. ' +
-    'Use the tools to read exact values instead of guessing — never invent numbers. Channel names are as listed; special channels available on every flight board: altitude_agl, velocity, net_accel_g. ' +
+    'Use the tools to read exact values instead of guessing — never invent numbers. Channel names are as listed; special channels available on every flight board: altitude_agl, velocity, net_accel_g, and thrust_N (motor thrust reconstructed from the accelerometer, when a motor is set on the Motor & thrust tab). ' +
+    'If motor_analysis is present it holds the nominal motor data, a point-mass simulation, and the thrust measured on each board — use it to discuss motor performance, delivered vs nominal impulse, burn time and drag. ' +
     'When a plot would help, call plot_channels (it draws in the chat). Explain physics plainly (burnout, drag, Mach, recovery, airbrakes, sensor saturation, Kalman bias). ' +
     'Be concise: short paragraphs or bullets, markdown allowed, cite board names and T+ times. If data cannot answer the question, say so and suggest what to log next time.';
   var TOOLS = [

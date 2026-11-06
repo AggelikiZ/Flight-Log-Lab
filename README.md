@@ -40,6 +40,7 @@ Tips: drag on a chart to zoom, double-click to reset. Use **Boost / Ascent / Who
 
 1. **Load the motor:** click **Load thrust curve…** and pick a `.eng` or `.rse` file (download them from [thrustcurve.org](https://www.thrustcurve.org)) or a `time,thrust` CSV from your static-fire test (units read from the header: `ms`, `kN`, `lbf`, `kgf`; default s and N). No curve file? Use **Enter manually** with total impulse and burn time (the curve is then approximated). Check the **propellant mass** and **total motor mass** below the motor; they are needed for the mass model. Motors are saved in your browser.
 2. **Enter the rocket:** wet mass on the pad *including the full motor*, body diameter, drag coefficient (from OpenRocket/RASAero), rail length, launch angle from vertical and pad altitude.
+   **Or import it from OpenRocket:** click **Import from OpenRocket (.ork)…** on the Rocket card and pick the simulation that matches your launch (the dialog shows each simulation's motor, apogee, rail and launch site). It fills the rocket values (wet mass, diameter, coast Cd, rail, angle, pad altitude), can add the motor (thrust curve and propellant mass from the simulation), and shows the OpenRocket prediction as its own column and dashed line next to your flight. A switch on the table chooses whether board percentages compare against OpenRocket or the built-in simulation. The simulation must have been saved with its flight data (OpenRocket's default "save simulation data").
 3. The tab then shows:
    - **Motor data:** designation and class, total impulse, average and peak thrust, burn time, specific impulse, thrust curve.
    - **Theory vs flight:** a point-mass simulation (rail, drag, propellant burn-off, standard atmosphere) next to every board: impulse, thrust, burnout time/altitude/velocity, max acceleration, max velocity and Mach, rail-exit velocity, apogee.
@@ -129,12 +130,14 @@ The site updates about a minute after the push (watch the **Actions** tab).
 
 ```
 src/core.js         Parsers (CSV, CATS .cfl), column auto-detection, unit conversion, flight analysis
+src/openrocket.js   OpenRocket .ork import (design, simulations, flight data)
 src/motor.js        Thrust-curve parsers (.eng/.rse/CSV), motor numbers, flight simulation, thrust & Cd extraction
 src/app.js          User interface: loading/merging files, charts, tabs, column editor, profiles, export
 src/template.html   Page layout and styles
 build.js            Bundles everything into one self-contained dist/index.html
 test.js             Runs the analysis on log files in a folder and prints the results
 test-motor.js       Self-checks for the motor maths (parsers, simulation vs rocket equation, thrust/Cd recovery)
+test-openrocket.js  Checks the OpenRocket import on a real file: node test-openrocket.js rocket.ork [motor.eng]
 docs/index.html     Published copy served by GitHub Pages
 ```
 

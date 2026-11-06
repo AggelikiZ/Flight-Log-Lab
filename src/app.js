@@ -694,7 +694,8 @@
   /* ---------- Motor & thrust ---------- */
   S.motor = {
     list: store.get('motors', []), sel: store.get('motorSel', null),
-    rocket: Object.assign({ mass: '', diameter: '', cd: 0.45, rail: 12, angle: 5, padAlt: 0 }, store.get('rocket', {}))
+    rocket: Object.assign({ mass: '', diameter: '', cd: 0.45, rail: 12, angle: 5, padAlt: 0 }, store.get('rocket', {})),
+    or: store.get('orPred', null), cmp: store.get('motorCmp', 'or')
   };
   var motorMemo = { key: null, val: null };
   function saveMotors() { store.set('motors', S.motor.list); store.set('motorSel', S.motor.sel); motorMemo.key = null; }
@@ -706,8 +707,8 @@
   function motorEnv(padPressure) { return { groundTempC: +S.settings.groundTemp, padAltitude: +S.motor.rocket.padAlt || 0, padPressure: padPressure }; }
   function altAGL(s) { var a = s.an; if (!a.series.alt) return null; if (!s._agl || s._aglG !== a.ground) { var y = new Float64Array(a.series.alt.length); for (var i = 0; i < y.length; i++) y[i] = a.series.alt[i] - a.ground; s._agl = y; s._aglG = a.ground; } return s._agl; }
   function motorAnalysis() {
-    var m = currentMotor(), rk = rocketParams();
-    var key = JSON.stringify([S.motor.sel, m && m.impulse, m && m.propMass, S.motor.rocket, S.settings.groundTemp, S.sources.map(function (s) { return s.key + ':' + lift(s); })]);
+    var m = currentMotor(), rk = rocketParams(), orM = !m && S.motor.or && S.motor.or.motor ? MOTOR.prepare(S.motor.or.motor) : null;
+    var key = JSON.stringify([S.motor.sel, m && m.impulse, m && m.propMass, S.motor.or && S.motor.or.name, S.motor.rocket, S.settings.groundTemp, S.sources.map(function (s) { return s.key + ':' + lift(s); })]);
     if (motorMemo.key === key) return motorMemo.val;
     var res = { motor: m, rocket: rk, sim: null, boards: [], notes: [] };
     if (m && rk.ok) {
@@ -721,8 +722,8 @@
       if (!a.series.thr) { b.missing = 'no accelerometer along the thrust axis'; res.boards.push(b); return; }
       var v = a.series.vAcc && a.sampleRate > 20 ? a.series.vAcc : a.series.v;
       b.vName = v === a.series.vAcc ? 'integrated acceleration' : a.velName;
-      b.ex = MOTOR.extractThrust({ t: cachedTp(s), f: a.series.thr, v: v, alt: altAGL(s), tApo: fin(a.tApo) ? a.tApo - L : NaN }, m, rk, motorEnv(a.padPressure),
-        { preLiftImpulse: m && res.sim && res.sim.ok ? MOTOR.impulseAt(m, res.sim.tLift) : 0 });
+      b.ex = MOTOR.extractThrust({ t: cachedTp(s), f: a.series.thr, v: v, alt: altAGL(s), tApo: fin(a.tApo) ? a.tApo - L : NaN }, m || orM, rk, motorEnv(a.padPressure),
+        { preLiftImpulse: m && res.sim && res.sim.ok ? MOTOR.impulseAt(m, res.sim.tLift) : orM ? MOTOR.impulseAt(orM, S.motor.or.tLift) : 0 });
       if (a.saturation && a.saturation.length) b.ex.notes.unshift('The accelerometer hit its ±' + a.saturation[0].g + ' g limit — peak thrust and impulse are underestimated.');
       res.boards.push(b);
     });
@@ -753,7 +754,7 @@
     document.body.appendChild(back); inputs.name.focus();
   }
   function renderMotor(el) {
-    var MA = motorAnalysis(), m = MA.motor, rk = MA.rocket, sim = MA.sim && MA.sim.ok ? MA.sim : null;
+    var MA = motorAnalysis(), m = MA.motor, rk = MA.rocket, sim = MA.sim && MA.sim.ok ? MA.sim : null, orP = S.motor.or, op = orP ? orP.pred : null;
 
     // ----- motor picker
     var mcard = h('div', { class: 'card' }, h('h3', null, 'Motor', h('span', { class: 'sub', text: 'saved in this browser' })));
@@ -766,31 +767,36 @@
       m ? h('button', { class: 'btn ghost', text: 'Delete', onclick: function () { var gone = S.motor.list.find(function (x) { return x.id === S.motor.sel; }); S.motor.list = S.motor.list.filter(function (x) { return x !== gone; }); S.motor.sel = null; saveMotors(); renderTab(); toast('Deleted “' + gone.name + '”'); } }) : null,
       h('span', { class: 'hint', text: 'Thrust curves: .eng / .rse from thrustcurve.org, or time,thrust CSV from a static fire.' })));
     el.appendChild(mcard);
-    if (!m) { mcard.appendChild(h('p', { class: 'dim', style: 'margin:0', text: 'Load your motor’s thrust curve to see its numbers, simulate the flight, and compare it with the thrust measured on each board.' })); return; }
-
-    var raw = S.motor.list.find(function (x) { return x.id === S.motor.sel; });
-    function massInput(key, label) {
-      return h('label', null, label, h('input', { type: 'number', step: 'any', value: fin(raw[key]) ? raw[key] : '', placeholder: 'required', onchange: function (e) { raw[key] = e.target.value === '' ? NaN : +e.target.value; saveMotors(); renderTab(); } }));
+    if (!m) mcard.appendChild(h('p', { class: 'dim', style: 'margin:0', text: 'Load your motor’s thrust curve to see its numbers, simulate the flight, and compare it with the thrust measured on each board — or import an OpenRocket file below, which can bring the motor along.' }));
+    else {
+      var raw = S.motor.list.find(function (x) { return x.id === S.motor.sel; });
+      var massInput = function (key, label) {
+        return h('label', null, label, h('input', { type: 'number', step: 'any', value: fin(raw[key]) ? +(+raw[key]).toFixed(4) : '', placeholder: 'required', onchange: function (e) { raw[key] = e.target.value === '' ? NaN : +e.target.value; saveMotors(); renderTab(); } }));
+      };
+      var tiles = h('div', { class: 'tiles', style: 'margin-bottom:12px' });
+      var tile = function (k, v, unit, d, sub) { tiles.appendChild(h('div', { class: 'tile' }, h('div', { class: 'k', text: k }), h('div', { class: 'v', html: (typeof v === 'string' ? esc(v) : fin(v) ? esc(f(v, d)) : '—') + (unit && fin(v) ? '<small>' + unit + '</small>' : '') }), sub ? h('div', { class: 's', text: sub }) : null)); };
+      tile('Designation', m.designation, '', 0, m.cls + '-class' + (m.approx ? ' · approximated curve' : m.source === 'openrocket' ? ' · curve from OpenRocket' : ''));
+      tile('Total impulse', m.impulse, 'N·s', 0);
+      tile('Average thrust', m.avg, 'N', 0);
+      tile('Peak thrust', m.peak, 'N', 0, 'at ' + f(m.peakT, 2) + ' s');
+      tile('Burn time', m.burnTime, 's', 2, '5 % → 5 % of peak');
+      tile('Specific impulse', m.isp, 's', 0, fin(m.isp) ? 'from propellant mass' : 'needs propellant mass');
+      mcard.appendChild(tiles);
+      mcard.appendChild(h('div', { class: 'mform', style: 'margin-bottom:12px' }, massInput('propMass', 'Propellant mass (kg)'), massInput('totalMass', 'Total motor mass (kg)')));
+      var cv = uniformCurve(m, 0);
+      makeChart(mcard, { unit: 'N', xLabel: 'time from ignition (s)', xShort: 't', series: [{ label: m.name + ' thrust', color: seriesColor(0), x: cv.x, y: cv.y }], range: [0, m.tEnd * 1.04], height: 200, yMin: 0 });
     }
-    var tiles = h('div', { class: 'tiles', style: 'margin-bottom:12px' });
-    function tile(k, v, unit, d, sub) { tiles.appendChild(h('div', { class: 'tile' }, h('div', { class: 'k', text: k }), h('div', { class: 'v', html: (typeof v === 'string' ? esc(v) : fin(v) ? esc(f(v, d)) : '—') + (unit && fin(v) ? '<small>' + unit + '</small>' : '') }), sub ? h('div', { class: 's', text: sub }) : null)); }
-    tile('Designation', m.designation, '', 0, m.cls + '-class' + (m.approx ? ' · approximated curve' : ''));
-    tile('Total impulse', m.impulse, 'N·s', 0);
-    tile('Average thrust', m.avg, 'N', 0);
-    tile('Peak thrust', m.peak, 'N', 0, 'at ' + f(m.peakT, 2) + ' s');
-    tile('Burn time', m.burnTime, 's', 2, '5 % → 5 % of peak');
-    tile('Specific impulse', m.isp, 's', 0, fin(m.isp) ? 'from propellant mass' : 'needs propellant mass');
-    mcard.appendChild(tiles);
-    mcard.appendChild(h('div', { class: 'mform', style: 'margin-bottom:12px' }, massInput('propMass', 'Propellant mass (kg)'), massInput('totalMass', 'Total motor mass (kg)')));
-    var cv = uniformCurve(m, 0);
-    makeChart(mcard, { unit: 'N', xLabel: 'time from ignition (s)', xShort: 't', series: [{ label: m.name + ' thrust', color: seriesColor(0), x: cv.x, y: cv.y }], range: [0, m.tEnd * 1.04], height: 200, yMin: 0 });
 
     // ----- rocket parameters
-    var r = S.motor.rocket, rcard = h('div', { class: 'card' }, h('h3', null, 'Rocket', h('span', { class: 'sub', text: 'used for the simulation and to turn measured acceleration into thrust' })));
+    var r = S.motor.rocket, rcard = h('div', { class: 'card' }, h('h3', null, 'Rocket', h('span', { class: 'sub', text: 'used for the simulation and to turn measured acceleration into thrust' }), h('span', { class: 'spacer' }),
+      h('button', { class: 'btn small', text: 'Import from OpenRocket (.ork)…', title: 'Fill these values from an OpenRocket simulation and show it as a prediction', onclick: function () { $('#orkFile').click(); } })));
     function rin(key, label, ph) { return h('label', null, label, h('input', { type: 'number', step: 'any', value: r[key], placeholder: ph || '', onchange: function (e) { r[key] = e.target.value; store.set('rocket', r); renderTab(); } })); }
     rcard.appendChild(h('div', { class: 'mform' },
       rin('mass', 'Wet mass on the pad, incl. full motor (kg)', 'required'), rin('diameter', 'Body diameter (mm)', 'required'), rin('cd', 'Drag coefficient Cd', 'e.g. 0.45'),
       rin('rail', 'Launch rail length (m)'), rin('angle', 'Launch angle from vertical (°)'), rin('padAlt', 'Pad altitude above sea level (m)')));
+    if (orP) rcard.appendChild(h('div', { class: 'mbar', style: 'margin:12px 0 0' },
+      h('span', { class: 'tag', text: 'OpenRocket' }), h('span', { class: 'hint', text: 'Prediction: “' + orP.name + '” from ' + orP.file + (orP.status === 'outdated' ? ' (marked outdated in OpenRocket)' : '') + ' · apogee ' + f(op.apogee, 0) + ' m' }),
+      h('button', { class: 'btn ghost small', text: 'Remove', onclick: function () { S.motor.or = null; store.set('orPred', null); motorMemo.key = null; renderTab(); } })));
     var cdB = MA.boards.filter(function (b) { return b.ex && fin(b.ex.cd); });
     if (cdB.length) {
       var cdM = cdB[0].ex.cd;
@@ -798,99 +804,182 @@
         h('button', { class: 'btn small', text: 'Use Cd ' + cdM.toFixed(3) + ' in the simulation', onclick: function () { r.cd = +cdM.toFixed(3); store.set('rocket', r); renderTab(); } })));
     }
     el.appendChild(rcard);
-    if (!rk.ok) { el.appendChild(h('div', { class: 'card empty-state', text: 'Enter the rocket’s wet mass, diameter and drag coefficient to simulate the flight and extract thrust from the logs.' })); return; }
+    if (!rk.ok) { el.appendChild(h('div', { class: 'card empty-state', text: 'Enter the rocket’s wet mass, diameter and drag coefficient — or import them from OpenRocket — to simulate the flight and extract thrust from the logs.' })); return; }
+    if (!m && !orP) { el.appendChild(h('div', { class: 'card empty-state', text: 'Load a motor (or import an OpenRocket simulation) to compare the flight with theory.' })); return; }
+
+    // which prediction the percentages refer to
+    var useOr = !!orP && (S.motor.cmp === 'or' || !sim);
+    var refLabel = useOr ? 'OpenRocket' : 'simulation';
 
     // ----- headline numbers
     var ref = refSource(), refA = ref && ref.an.ok ? ref.an : null, refB = MA.boards.find(function (b) { return b.s === ref && b.ex && b.ex.ok; }) || MA.boards.find(function (b) { return b.ex && b.ex.ok; });
     var ht = h('div', { class: 'tiles' });
     function pct(meas, theo) { return fin(meas) && fin(theo) && theo ? (meas - theo) / theo * 100 : NaN; }
     function htile(k, v, unit, d, cmp, cmpLabel) {
-      var p = pct(v, cmp), sub = fin(p) ? '<span class="' + (Math.abs(p) < 5 ? 'delta-pos' : 'delta-neg') + '">' + (p >= 0 ? '+' : '−') + f(Math.abs(p), 1) + ' %</span> vs ' + esc(cmpLabel) + ' ' + esc(f(cmp, d)) + (unit ? ' ' + unit : '') : (cmpLabel || '');
+      var p = pct(v, cmp), sub = fin(p) ? '<span class="' + (Math.abs(p) < 5 ? 'delta-pos' : 'delta-neg') + '">' + (p >= 0 ? '+' : '−') + f(Math.abs(p), 1) + ' %</span> vs ' + esc(cmpLabel) + ' ' + esc(f(cmp, d)) + (unit ? ' ' + unit : '') : esc(cmpLabel || '');
       ht.appendChild(h('div', { class: 'tile' }, h('div', { class: 'k', text: k }), h('div', { class: 'v', html: (fin(v) ? esc(f(v, d)) + (unit ? '<small>' + unit + '</small>' : '') : '—') }), h('div', { class: 's', html: sub })));
     }
-    if (sim) htile('Predicted apogee', sim.apogee, 'm', 0, refA && refA.apogee, 'measured');
-    if (refB) htile('Delivered impulse · ' + refB.s.label, refB.ex.impulseTotal, 'N·s', 0, m.impulse, 'nominal');
-    if (refB) htile('Measured peak thrust', refB.ex.peak, 'N', 0, m.peak, 'nominal');
-    if (sim) htile('Rail exit velocity', sim.railExitV, 'm/s', 1, NaN, 'simulated, ' + f(+r.rail, 1) + ' m rail');
-    if (sim) htile('Liftoff thrust-to-weight', sim.liftoffTW, '', 1, NaN, 'simulated');
-    if (cdB.length) htile('Coast drag coefficient', cdB[0].ex.cd, '', 3, rk.cd, 'entered');
+    if (refA) htile('Measured apogee · ' + ref.label, refA.apogee, 'm', 0, useOr ? op.apogee : sim && sim.apogee, useOr ? 'OpenRocket' : 'simulated');
+    if (sim) htile('Built-in simulation apogee', sim.apogee, 'm', 0, NaN, 'point-mass model, constant Cd');
+    if (orP) htile('OpenRocket apogee', op.apogee, 'm', 0, NaN, '“' + orP.name + '”');
+    var nomI = m ? m.impulse : op && op.impulse, nomP = m ? m.peak : op && op.peak;
+    if (refB) htile('Delivered impulse · ' + refB.s.label, refB.ex.impulseTotal, 'N·s', 0, nomI, 'nominal');
+    if (refB) htile('Measured peak thrust', refB.ex.peak, 'N', 0, nomP, 'nominal');
+    if (sim || op) htile('Rail exit velocity', useOr || !sim ? op.railExitV : sim.railExitV, 'm/s', 1, NaN, (useOr || !sim ? 'OpenRocket' : 'simulated') + ', ' + f(+r.rail, 1) + ' m rail');
+    if (cdB.length) htile('Coast drag coefficient', cdB[0].ex.cd, '', 3, useOr && fin(op.cd) ? op.cd : rk.cd, useOr && fin(op.cd) ? 'OpenRocket' : 'entered');
     el.appendChild(ht);
 
     // ----- theory vs flight table
     var cols = MA.boards.filter(function (b) { return b.ex && b.ex.ok || b.s.an.ok; });
     function bval(b, fn) { try { return fn(b); } catch (e) { return NaN; } }
     function vAt(s, series, tRaw) { return series && fin(tRaw) ? RL.valueAt(s.ch.t, series, tRaw) : NaN; }
+    var o = op || {};
+    // [label, unit, decimals, built-in theory, board value, tooltip, prefix, OpenRocket]
     var rows = [
-      ['Total impulse', 'N·s', 0, m.impulse, function (b) { return b.ex && b.ex.impulseTotal; }, 'nominal from the curve; measured = from liftoff + the nominal impulse burnt on the pad before liftoff'],
-      ['Average thrust (in flight)', 'N', 0, sim ? (m.impulse - MOTOR.impulseAt(m, sim.tLift)) / (m.burnEnd - sim.tLift) : m.avg, function (b) { return b.ex && b.ex.avg; }, 'impulse after liftoff ÷ time from liftoff to thrust end'],
-      ['Peak thrust', 'N', 0, m.peak, function (b) { return b.ex && b.ex.peak; }],
-      ['Thrust ends', 's', 2, sim ? m.burnEnd - sim.tLift : NaN, function (b) { return b.ex && b.ex.burnEnd; }, 'T+; thrust falls below 5 % of peak', 'T+'],
-      ['Burnout (acceleration < 1 g)', 's', 2, sim && sim.tBurn - sim.tLift, function (b) { return b.s.an.tBurn - b.s.an.tLift; }, 'T+; same definition as the Overview', 'T+'],
-      ['Altitude at burnout', 'm', 0, sim && sim.burnAlt, function (b) { return vAt(b.s, altAGL(b.s), b.s.an.tBurn); }],
-      ['Velocity at burnout', 'm/s', 0, sim && sim.burnV, function (b) { return vAt(b.s, b.s.an.series.vAcc && b.s.an.sampleRate > 20 ? b.s.an.series.vAcc : b.s.an.series.v, b.s.an.tBurn); }],
-      ['Max acceleration (net)', 'g', 1, sim && (sim.maxSf - G) / G, function (b) { return b.s.an.maxAcc / G; }],
-      ['Max velocity', 'm/s', 0, sim && sim.maxV, function (b) { return b.s.an.maxV; }],
-      ['Max Mach', '', 2, sim && sim.maxMach, function (b) { return b.s.an.mach; }],
-      ['Rail exit velocity', 'm/s', 1, sim && sim.railExitV, function () { return NaN; }],
-      ['Apogee (AGL)', 'm', 0, sim && sim.apogee, function (b) { return b.s.an.apogee; }],
-      ['Time to apogee', 's', 2, sim && sim.tApo - sim.tLift, function (b) { return b.s.an.tApo - b.s.an.tLift; }],
-      ['Drag coefficient (coast)', '', 3, rk.cd, function (b) { return b.ex && b.ex.cd; }, 'theory column = the Cd you entered']
+      ['Total impulse', 'N·s', 0, m && m.impulse, function (b) { return b.ex && b.ex.impulseTotal; }, 'nominal from the curve; measured = from liftoff + the nominal impulse burnt on the pad before liftoff', '', o.impulse],
+      ['Average thrust (in flight)', 'N', 0, m && (sim ? (m.impulse - MOTOR.impulseAt(m, sim.tLift)) / (m.burnEnd - sim.tLift) : m.avg), function (b) { return b.ex && b.ex.avg; }, 'impulse after liftoff ÷ time from liftoff to thrust end', '', o.avgFlight],
+      ['Peak thrust', 'N', 0, m && m.peak, function (b) { return b.ex && b.ex.peak; }, '', '', o.peak],
+      ['Thrust ends', 's', 2, m && sim ? m.burnEnd - sim.tLift : NaN, function (b) { return b.ex && b.ex.burnEnd; }, 'T+; thrust falls below 5 % of peak', 'T+', o.thrustEnd],
+      ['Burnout (acceleration < 1 g)', 's', 2, sim && sim.tBurn - sim.tLift, function (b) { return b.s.an.tBurn - b.s.an.tLift; }, 'T+; same definition as the Overview', 'T+', o.tBurn],
+      ['Altitude at burnout', 'm', 0, sim && sim.burnAlt, function (b) { return vAt(b.s, altAGL(b.s), b.s.an.tBurn); }, '', '', o.burnAlt],
+      ['Velocity at burnout', 'm/s', 0, sim && sim.burnV, function (b) { return vAt(b.s, b.s.an.series.vAcc && b.s.an.sampleRate > 20 ? b.s.an.series.vAcc : b.s.an.series.v, b.s.an.tBurn); }, '', '', o.burnV],
+      ['Max acceleration (net)', 'g', 1, sim && (sim.maxSf - G) / G, function (b) { return b.s.an.maxAcc / G; }, '', '', o.maxAccNet],
+      ['Max velocity', 'm/s', 0, sim && sim.maxV, function (b) { return b.s.an.maxV; }, '', '', o.maxV],
+      ['Max Mach', '', 2, sim && sim.maxMach, function (b) { return b.s.an.mach; }, '', '', o.maxMach],
+      ['Rail exit velocity', 'm/s', 1, sim && sim.railExitV, function () { return NaN; }, '', '', o.railExitV],
+      ['Apogee (AGL)', 'm', 0, sim && sim.apogee, function (b) { return b.s.an.apogee; }, '', '', o.apogee],
+      ['Time to apogee', 's', 2, sim && sim.tApo - sim.tLift, function (b) { return b.s.an.tApo - b.s.an.tLift; }, '', '', o.tApo],
+      ['Drag coefficient (coast)', '', 3, rk.cd, function (b) { return b.ex && b.ex.cd; }, 'built-in column = the Cd you entered; OpenRocket = its median Cd during the coast', '', o.cd]
     ];
+    var showTheo = !!(m || sim), showOr = !!orP;
     var tbl = h('table', { class: 't' });
-    tbl.appendChild(h('thead', null, h('tr', null, h('th', { text: 'Metric' }), h('th', { class: 'n', text: sim ? 'Theory (motor + simulation)' : 'Motor data' }),
+    tbl.appendChild(h('thead', null, h('tr', null, h('th', { text: 'Metric' }),
+      showTheo ? h('th', { class: 'n', text: sim ? 'Built-in simulation' : 'Motor data' }) : null,
+      showOr ? h('th', { class: 'n', text: 'OpenRocket' }) : null,
       cols.map(function (b) { return h('th', { class: 'n' }, h('span', { class: 'swatch', style: 'display:inline-block;margin:0 5px 0 0;vertical-align:0;background:' + seriesColor(b.s.slot) }), b.s.label); }))));
     var tb = h('tbody'); tbl.appendChild(tb);
     rows.forEach(function (row) {
-      var theo = row[3], vals = cols.map(function (b) { return bval(b, row[4]); });
-      if (!fin(theo) && !vals.some(fin)) return;
+      var theo = row[3], orv = row[7], refV = useOr ? orv : theo, vals = cols.map(function (b) { return bval(b, row[4]); });
+      if (!fin(theo) && !fin(orv) && !vals.some(fin)) return;
       function cell(v) { return fin(v) ? (row[6] || '') + f(v, row[2]) + (row[1] ? ' ' + row[1] : '') : null; }
+      function dash() { return h('span', { class: 'dim', text: '—' }); }
       tb.appendChild(h('tr', null, h('td', { title: row[5] || '' }, row[0], row[5] ? h('span', { class: 'dim', text: ' ⓘ' }) : null),
-        h('td', { class: 'n' }, cell(theo) || h('span', { class: 'dim', text: '—' })),
+        showTheo ? h('td', { class: 'n' }, cell(theo) || dash()) : null,
+        showOr ? h('td', { class: 'n' }, cell(orv) || dash()) : null,
         vals.map(function (v) {
-          var p = pct(v, theo), c = cell(v);
-          return h('td', { class: 'n' }, c || h('span', { class: 'dim', text: '—' }), c && fin(p) && row[6] !== 'T+' ? h('span', { class: 'dlt ' + (Math.abs(p) < 5 ? 'delta-pos' : 'delta-neg'), text: (p >= 0 ? '+' : '−') + f(Math.abs(p), 1) + '%' }) : null);
+          var p = pct(v, refV), c = cell(v);
+          return h('td', { class: 'n' }, c || dash(), c && fin(p) && row[6] !== 'T+' ? h('span', { class: 'dlt ' + (Math.abs(p) < 5 ? 'delta-pos' : 'delta-neg'), text: (p >= 0 ? '+' : '−') + f(Math.abs(p), 1) + '%' }) : null);
         })));
     });
-    el.appendChild(h('div', { class: 'card' }, h('h3', null, 'Theory vs flight', h('span', { class: 'sub', text: 'percentages compare each board with the theory column · hover a metric for its definition' })), h('div', { style: 'overflow-x:auto' }, tbl)));
+    var cmpSeg = null;
+    if (orP && sim) {
+      cmpSeg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Compare boards with' });
+      [['sim', 'Built-in simulation'], ['or', 'OpenRocket']].forEach(function (x) { cmpSeg.appendChild(h('button', { class: (useOr ? 'or' : 'sim') === x[0] ? 'on' : '', text: x[1], onclick: function () { S.motor.cmp = x[0]; store.set('motorCmp', x[0]); renderTab(); } })); });
+    }
+    el.appendChild(h('div', { class: 'card' }, h('h3', null, 'Theory vs flight', h('span', { class: 'sub', text: 'board percentages compare with the ' + refLabel + ' · hover a metric for its definition' }), h('span', { class: 'spacer' }), cmpSeg ? h('span', { class: 'hint', text: 'Compare with' }) : null, cmpSeg), h('div', { style: 'overflow-x:auto' }, tbl)));
 
     // ----- charts
     var ex = MA.boards.filter(function (b) { return b.ex && b.ex.ok; });
-    var burnEnd = Math.max.apply(null, [sim ? m.burnEnd - sim.tLift : m.burnEnd].concat(ex.map(function (b) { return b.ex.burnEnd; })).filter(fin));
-    var muted = cssVar('--text-muted');
+    var burnEnd = Math.max.apply(null, [m && sim ? m.burnEnd - sim.tLift : m ? m.burnEnd : NaN, op ? op.thrustEnd : NaN].concat(ex.map(function (b) { return b.ex.burnEnd; })).filter(fin));
+    if (!fin(burnEnd)) burnEnd = 5;
+    var muted = cssVar('--text-muted'), orColor = cssVar('--warning');
+    var orS = orP ? orP.series : null, orX = orS ? Float64Array.from(orS.tp) : null;
+    var simC = sim ? { label: 'Built-in simulation', color: muted, x: sim.tp, dash: [6, 4], width: 2 } : null;
+    var orC = orS ? { label: 'OpenRocket', color: orColor, x: orX, dash: [2, 3], width: 2 } : null;
     var thrSeries = [];
-    var nc = uniformCurve(m, sim ? sim.tLift : 0); thrSeries.push({ label: 'Nominal (' + m.name + ')', color: muted, x: nc.x, y: nc.y, dash: [6, 4], width: 2 });
+    if (m) { var nc = uniformCurve(m, sim ? sim.tLift : 0); thrSeries.push({ label: 'Nominal (' + m.name + ')', color: muted, x: nc.x, y: nc.y, dash: [6, 4], width: 2 }); }
+    if (orC) thrSeries.push(Object.assign({ y: Float64Array.from(orS.thrust) }, orC, { label: 'OpenRocket thrust' }));
     ex.forEach(function (b) { thrSeries.push({ label: b.s.label + ' · from accelerometer', color: seriesColor(b.s.slot), x: b.ex.t, y: b.ex.thrust }); });
     chartCard(el, 'Thrust', ex.length ? 'nominal curve vs thrust reconstructed from each board (T = m·a + drag)' : 'nominal curve — no board has an accelerometer along the thrust axis', function (c) {
-      return makeChart(c, { unit: 'N', series: thrSeries, range: [-0.6, (fin(burnEnd) ? burnEnd : m.tEnd) + 1.5], events: eventMarkers({ logged: false }), height: 300, syncKey: 'mo-b' });
+      return makeChart(c, { unit: 'N', series: thrSeries, range: [-0.6, burnEnd + 1.5], events: eventMarkers({ logged: false }), height: 300, syncKey: 'mo-b' });
     });
-    if (sim) {
-      var simC = { label: 'Simulation', color: muted, x: sim.tp, dash: [6, 4], width: 2 };
+    if (sim || orC) {
+      var pred = function (key, conv) {
+        var out = [];
+        if (sim) out.push(Object.assign({ y: key === 'acc' ? Float64Array.from(sim.series.sf, function (x) { return (x - G) / G; }) : Float64Array.from(sim.series[key]) }, simC));
+        if (orC) out.push(Object.assign({ y: Float64Array.from(orS[key === 'acc' ? 'az' : key], conv || function (x) { return x; }) }, orC));
+        return out;
+      };
       var grid = h('div', { class: 'grid2' }); el.appendChild(grid);
-      var asc = [-2, Math.max(sim.tApo - sim.tLift, refA && fin(refA.tApo) ? refA.tApo - refA.tLift : 0) + 4];
-      chartCard(grid, 'Altitude', 'simulation vs boards', function (c) { return makeChart(c, { unit: 'm', series: [Object.assign({ y: Float64Array.from(sim.series.alt) }, simC)].concat(altSeries()), range: asc, height: 260, syncKey: 'mo' }); });
-      chartCard(grid, 'Vertical velocity', 'simulation vs boards', function (c) { return makeChart(c, { unit: 'm/s', series: [Object.assign({ y: Float64Array.from(sim.series.vz) }, simC)].concat(velSeries(false)), range: asc, height: 260, syncKey: 'mo' }); });
-      var simAcc = Float64Array.from(sim.series.sf, function (x) { return (x - G) / G; });
+      var tA = Math.max(sim ? sim.tApo - sim.tLift : 0, op ? op.tApo : 0, refA && fin(refA.tApo) ? refA.tApo - refA.tLift : 0);
+      var asc = [-2, tA + 4], lbl = [sim ? 'simulation' : null, orC ? 'OpenRocket' : null].filter(Boolean).join(' & ') + ' vs boards';
+      chartCard(grid, 'Altitude', lbl, function (c) { return makeChart(c, { unit: 'm', series: pred('alt').concat(altSeries()), range: asc, height: 260, syncKey: 'mo' }); });
+      chartCard(grid, 'Vertical velocity', lbl, function (c) { return makeChart(c, { unit: 'm/s', series: pred('vz').concat(velSeries(false)), range: asc, height: 260, syncKey: 'mo' }); });
       el.appendChild(h('div', { style: 'height:16px' }));
-      chartCard(el, 'Net acceleration', 'simulation vs boards, in g', function (c) { return makeChart(c, { unit: 'g', series: [Object.assign({ y: simAcc }, simC)].concat(accSeries()), range: [-0.6, (fin(burnEnd) ? burnEnd : m.tEnd) + 4], height: 240, syncKey: 'mo-b' }); });
+      chartCard(el, 'Net acceleration', lbl + ', in g', function (c) { return makeChart(c, { unit: 'g', series: pred('acc', function (x) { return x / G; }).concat(accSeries()), range: [-0.6, burnEnd + 4], height: 240, syncKey: 'mo-b' }); });
     }
 
     // ----- notes
     var notes = MA.notes.slice();
+    if (orP && orP.status === 'outdated') notes.push({ level: 'warn', text: 'OpenRocket marked “' + orP.name + '” as outdated — the design changed after it last ran. Re-run it in OpenRocket and re-import for an up-to-date prediction.' });
+    if (orP && !m) notes.push({ level: 'info', text: 'No motor is selected, so thrust extraction uses the propellant mass and impulse from the OpenRocket simulation.' });
     MA.boards.forEach(function (b) {
       if (b.missing) notes.push({ level: 'info', who: b.s.label, text: 'Thrust not extracted: ' + b.missing + '.' });
       else { (b.ex.notes || []).forEach(function (n) { notes.push({ level: /limit|never|No velocity/.test(n) ? 'warn' : 'info', who: b.s.label, text: n }); }); if (b.ex.ok) notes.push({ level: 'info', who: b.s.label, text: 'Drag computed from ' + b.vName + '.' }); }
     });
-    notes.push({ level: 'info', text: 'Thrust from the logs uses T = m·a + ½ρv²·Cd·A, with mass falling as propellant burns (in proportion to impulse delivered). Thrust built up on the pad before liftoff cannot be seen by the accelerometer; the nominal pre-liftoff impulse' + (sim ? ' (' + f(MOTOR.impulseAt(m, sim.tLift), 0) + ' N·s)' : '') + ' is added to the measured total.' });
-    notes.push({ level: 'info', text: 'The simulation is a point-mass model: constant Cd, no wind, no weathercocking, rocket always pointing along its velocity after the rail. Use OpenRocket/RASAero for detailed predictions; the measured coast Cd above helps calibrate them.' });
+    notes.push({ level: 'info', text: 'Thrust from the logs uses T = m·a + ½ρv²·Cd·A, with mass falling as propellant burns (in proportion to impulse delivered). Thrust built up on the pad before liftoff cannot be seen by the accelerometer; the nominal pre-liftoff impulse' + (m && sim ? ' (' + f(MOTOR.impulseAt(m, sim.tLift), 0) + ' N·s)' : '') + ' is added to the measured total.' });
+    if (sim) notes.push({ level: 'info', text: 'The built-in simulation is a point-mass model: constant Cd, no wind, no weathercocking, rocket always pointing along its velocity after the rail. OpenRocket models Cd vs Mach, wind and stability, so expect a few percent difference between the two.' });
     var ncard = h('div', { class: 'card' }, h('h3', null, 'Notes & assumptions')), list = h('div', { class: 'notes' });
     notes.forEach(function (x) { list.appendChild(h('div', { class: 'note ' + x.level }, h('span', { class: 'ico', text: x.level === 'warn' ? '!' : 'i' }), h('div', null, x.who ? h('span', { class: 'who', text: x.who + ':' }) : null, x.text))); });
     ncard.appendChild(list); el.appendChild(ncard);
   }
+  function openOrkImport(design, fileName) {
+    var sims = design.sims, pick = ORK.defaultSim(design);
+    if (!pick) { toast('No simulation in ' + fileName + ' has saved flight data — run one in OpenRocket and save again'); return; }
+    var back = h('div', { class: 'modal-back', onclick: function (e) { if (e.target === back) back.remove(); } });
+    var tbl = h('table', { class: 't orklist' }, h('thead', null, h('tr', null, ['', 'Simulation', 'Status', 'Motor', 'Apogee', 'Rail · angle', 'Launch site'].map(function (x) { return h('th', { text: x }); }))));
+    var tb = h('tbody'); tbl.appendChild(tb);
+    sims.forEach(function (s, i) {
+      var c = s.conditions, site = (fin(c.launchAlt) ? f(c.launchAlt, 0) + ' m' : '') + (fin(c.lat) ? ' · ' + c.lat.toFixed(2) + '°, ' + c.lon.toFixed(2) + '°' : '');
+      tb.appendChild(h('tr', { class: s.hasData ? '' : 'dis' },
+        h('td', null, h('input', { type: 'radio', name: 'orksim', value: i, disabled: !s.hasData, checked: s === pick, 'aria-label': s.name })),
+        h('td', { text: s.name }), h('td', { text: s.hasData ? s.status : 'no data' }), h('td', { text: s.motor ? s.motor.designation : '—' }),
+        h('td', { class: 'n', text: fin(s.summary.maxaltitude) ? f(s.summary.maxaltitude, 0) + ' m' : '—' }),
+        h('td', { text: (fin(c.railLength) ? f(c.railLength, 1) + ' m' : '—') + ' · ' + (fin(c.angleDeg) ? f(c.angleDeg, 1) + '°' : '—') }), h('td', { text: site || '—' })));
+    });
+    function cb(label, checked) { var i = h('input', { type: 'checkbox', checked: checked }); return { el: h('label', null, i, h('span', { html: label })), i: i }; }
+    var cFill = cb('<b>Fill the rocket values</b> — wet mass, diameter, coast Cd, rail length, launch angle and pad altitude', true);
+    var cPred = cb('<b>Show this simulation as the OpenRocket prediction</b> in the table and charts', true);
+    var cMot = cb('<b>Add the motor</b> using the thrust curve and propellant mass from this simulation', !currentMotor());
+    back.appendChild(h('div', { class: 'modal', style: 'width:min(900px,100%)' },
+      h('header', null, h('h2', { text: 'Import from OpenRocket · ' + fileName }), h('button', { class: 'btn ghost small', text: '✕', onclick: function () { back.remove(); } })),
+      h('div', { class: 'content' }, h('p', { class: 'dim', style: 'margin-top:0', text: 'Pick the simulation that matches your launch (check the launch site and rail angle). Only simulations saved with flight data can be imported.' }),
+        h('div', { class: 'scroll', style: 'max-height:340px' }, tbl), h('div', { class: 'chk' }, cFill.el, cPred.el, cMot.el)),
+      h('footer', null, h('button', { class: 'btn primary', text: 'Import', onclick: function () {
+        var rb = back.querySelector('input[name=orksim]:checked'), s = rb ? sims[+rb.value] : null; if (!s) return;
+        var d; try { d = ORK.derive(s, design); } catch (e) { toast(e.message); return; }
+        var r = S.motor.rocket, c = d.conditions;
+        if (cFill.i.checked) {
+          if (fin(d.wetMass)) r.mass = +d.wetMass.toFixed(3);
+          if (fin(d.diameter)) r.diameter = +(d.diameter * 1000).toFixed(1);
+          if (fin(d.cd)) r.cd = +d.cd.toFixed(3);
+          if (fin(c.railLength)) r.rail = c.railLength;
+          if (fin(c.angleDeg)) r.angle = c.angleDeg;
+          if (fin(c.launchAlt)) r.padAlt = c.launchAlt;
+          store.set('rocket', r);
+        }
+        if (cPred.i.checked) {
+          S.motor.or = { name: d.name, file: fileName, status: d.status, pred: d.pred, series: d.series, tLift: d.tLift, motor: d.motor };
+          store.set('orPred', S.motor.or); S.motor.cmp = 'or'; store.set('motorCmp', 'or');
+        }
+        motorMemo.key = null; back.remove();
+        if (cMot.i.checked) { var mo = Object.assign({}, d.motor); mo.name = d.motor.name + ' (OpenRocket)'; addMotor(mo); }
+        else { renderTab(); toast('Imported “' + d.name + '”'); }
+      } }))));
+    document.body.appendChild(back);
+  }
+  $('#orkFile').addEventListener('change', function (e) {
+    var file = e.target.files[0]; e.target.value = ''; if (!file) return;
+    busy(true, 'Reading ' + file.name + '…');
+    file.arrayBuffer().then(ORK.unpack).then(function (xml) { busy(false); openOrkImport(ORK.parse(xml), file.name); })
+      .catch(function (err) { busy(false); toast('Could not read ' + file.name + ': ' + ((err && err.message) || err)); });
+  });
   function motorContext() {
-    var MA = motorAnalysis(), m = MA.motor; if (!m) return null;
+    var MA = motorAnalysis(), m = MA.motor, orP = S.motor.or; if (!m && !orP) return null;
     var r = function (x, d) { return fin(x) ? +x.toFixed(d) : null; }, sim = MA.sim && MA.sim.ok ? MA.sim : null;
-    var o = { motor: { name: m.name, designation: m.designation, approximated_curve: !!m.approx, total_impulse_Ns: r(m.impulse, 0), avg_thrust_N: r(m.avg, 0), peak_thrust_N: r(m.peak, 0), burn_time_s: r(m.burnTime, 2), propellant_kg: r(m.propMass, 3), isp_s: r(m.isp, 0) },
+    var o = { motor: !m ? null : { name: m.name, designation: m.designation, approximated_curve: !!m.approx, total_impulse_Ns: r(m.impulse, 0), avg_thrust_N: r(m.avg, 0), peak_thrust_N: r(m.peak, 0), burn_time_s: r(m.burnTime, 2), propellant_kg: r(m.propMass, 3), isp_s: r(m.isp, 0) },
       rocket: { wet_mass_kg: MA.rocket.liftoffMass || null, diameter_mm: MA.rocket.diameter ? MA.rocket.diameter * 1000 : null, cd: MA.rocket.cd || null, rail_m: MA.rocket.railLength, launch_angle_deg: MA.rocket.angleDeg } };
+    if (orP) { o.openrocket_prediction = { simulation: orP.name, file: orP.file, status: orP.status }; for (var k in orP.pred) o.openrocket_prediction[k] = r(orP.pred[k], 3); }
     if (sim) o.simulation = { apogee_m: r(sim.apogee, 0), t_apogee: r(sim.tApo - sim.tLift, 2), max_velocity_mps: r(sim.maxV, 1), max_mach: r(sim.maxMach, 3), max_net_accel_g: r((sim.maxSf - G) / G, 2), t_burnout: r(sim.tBurn - sim.tLift, 2), burnout_alt_m: r(sim.burnAlt, 0), burnout_velocity_mps: r(sim.burnV, 1), rail_exit_velocity_mps: r(sim.railExitV, 1), liftoff_thrust_to_weight: r(sim.liftoffTW, 2) };
     o.measured_thrust = MA.boards.map(function (b) { return b.ex && b.ex.ok ? { board: b.s.label, total_impulse_Ns: r(b.ex.impulseTotal, 0), impulse_after_liftoff_Ns: r(b.ex.impulse, 0), avg_thrust_N: r(b.ex.avg, 0), peak_thrust_N: r(b.ex.peak, 0), t_peak: r(b.ex.peakT, 2), thrust_ends_t: r(b.ex.burnEnd, 2), coast_cd: r(b.ex.cd, 3), notes: b.ex.notes } : { board: b.s.label, not_available: b.missing || 'not computed' }; });
     return o;
